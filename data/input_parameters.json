@@ -1,0 +1,12 @@
+{
+    "element_size": 0.5,
+    "placement": [0,0,5],
+    "num_elements": 200,
+    "frequency": 2.4e9,
+    "distance_tx_ris": 10,
+    "distance_ris_rx": 10,
+    "num_simulations": 10000,
+    "fading_type": "Rayleigh",
+    "path_loss_exponent": 2.0,
+    "noise_power": -90
+}
