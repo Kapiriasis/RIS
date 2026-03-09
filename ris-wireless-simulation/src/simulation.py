@@ -142,7 +142,7 @@ class Simulation:
         }
 
     def _direct_path_signal(self, ctx, input_params):
-        #Compute complex direct TX->RX signal (single sample).
+        # Compute complex direct TX->RX signal (single sample).
         tx_position = ctx['tx_position']
         rx_position = ctx['rx_position']
         k = ctx['k']

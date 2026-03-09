@@ -21,7 +21,7 @@ class RISModel:
         self.placement = placement
 
     def set_layout(self, layout):
-        """Set layout: '1d' (linear along x) or '2d' (rectangular grid in x-y plane, normal +z)."""
+        # Set layout: '1d' (linear along x) or '2d' (rectangular grid in x-y plane, normal +z).
         self.layout = str(layout).lower()
 
     def set_num_elements(self, num):
@@ -45,7 +45,7 @@ class RISModel:
         self.reflection_angle_exponent = float(exponent)
 
     def configure_from_params(self, params):
-        """Set all RIS parameters from a config dict (e.g. from load_input_parameters)."""
+        # Set all RIS parameters from a config dict (e.g. from load_input_parameters).
         self.set_num_elements(params.get('num_elements', 200))
         self.set_placement(params.get('placement', [0, 0, 5]))
         self.set_layout(params.get('layout', '2d'))

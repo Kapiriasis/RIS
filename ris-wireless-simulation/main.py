@@ -5,7 +5,7 @@ from src.simulation import Simulation
 from src.utils import load_input_parameters, plot_results
 
 def _find_input_parameters_path():
-    """Resolve path to input_parameters.json from cwd or repo layout."""
+    # Resolve path to input_parameters.json from cwd or repo layout.
     candidates = [
         'data/input_parameters.json',  # cwd = repo root
         os.path.join(os.path.dirname(__file__), '..', 'data', 'input_parameters.json'),  # cwd = ris-wireless-simulation
