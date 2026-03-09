@@ -10,26 +10,37 @@ def load_input_parameters(file_path):
             "element_size": 0.5,              # base element size (e.g. in wavelengths or meters)
             "placement": [0, 0, 5],           # default RIS center position [x, y, z]
             "num_elements": 200,              # maximum number of RIS elements
+            "layout": "2d",                   # "1d" or "2d" RIS layout
+            "use_element_pattern": True,      # cos(θ) element pattern (False = isotropic)
+            # RIS hardware non-idealities
+            "reflection_amplitude": 0.9,
+            "phase_quantization_bits": 2,
+            "phase_error_std": 0.0,
             # Optional sweeps for analysis of Part 1
-            # If you don't want to sweep these, you can remove or set them to null in the JSON.
             "element_size_list": [0.25, 0.5, 1.0],
             "placement_list": [
                 [0, 0, 5],
-                [5, 0, 5],
-                [10, 0, 5]
+                [4, 0, 5],
+                [8, 0, 5],
+                [12, 0, 5],
+                [16, 0, 5],
+                [20, 0, 5]
             ],
             # Transmitter / receiver geometry
             "tx_position": [0, 0, 0],
-            # Default RX on x-axis at distance_tx_ris + distance_ris_rx if not overridden
             "rx_position": None,
-            # Channel parameters
+            # Channel and noise parameters
             "frequency": 2.4e9,
             "distance_tx_ris": 10,
             "distance_ris_rx": 10,
-            "num_simulations": 1000,
+            "num_simulations": 10000,
             "fading_type": "Rayleigh",
-            "path_loss_exponent": 2.0,
-            "noise_power": -90
+            "path_loss_exponent": 2.0,        # for RIS hops (TX-RIS, RIS-RX)
+            "direct_path_loss_exponent": 4.0, # for direct TX-RX (e.g. higher if blocked/NLOS)
+            "direct_path_loss_factor": 50,   # extra blockage factor on direct (>=1)
+            "tx_power_dbm": 30,
+            "bandwidth_hz": 10e6,
+            "noise_figure_db": 5
         }
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, 'w') as file:
@@ -40,43 +51,41 @@ def load_input_parameters(file_path):
         with open(file_path, 'r') as file:
             params = json.load(file)
 
-        # Backwards-compatible defaults so older JSON files still work
         params.setdefault("element_size", 0.5)
         params.setdefault("placement", [0, 0, 5])
         params.setdefault("num_elements", 200)
+        params.setdefault("reflection_amplitude", 0.9)
+        params.setdefault("phase_quantization_bits", 2)
+        params.setdefault("phase_error_std", 0.0)
         params.setdefault("frequency", 2.4e9)
         params.setdefault("distance_tx_ris", 10)
         params.setdefault("distance_ris_rx", 10)
         params.setdefault("num_simulations", 1000)
         params.setdefault("fading_type", "Rayleigh")
         params.setdefault("path_loss_exponent", 2.0)
-        params.setdefault("noise_power", -90)
-
-        # New geometry / sweep parameters for RIS analysis
+        params.setdefault("direct_path_loss_exponent", params.get("path_loss_exponent", 2.0))
+        params.setdefault("direct_path_loss_factor", 50)
+        params.setdefault("layout", "2d")
+        params.setdefault("use_element_pattern", True)
+        params.setdefault("tx_power_dbm", 30)
+        params.setdefault("bandwidth_hz", 10e6)
+        params.setdefault("noise_figure_db", 5)
         params.setdefault("tx_position", [0, 0, 0])
-        # If rx_position is missing or null, Simulation will fall back to the default on x-axis
         params.setdefault("rx_position", None)
-        # Optional sweeps
         params.setdefault("element_size_list", None)
         params.setdefault("placement_list", None)
 
         # Keep scalar distances consistent with geometry if both positions are provided
         try:
-            tx_pos = params.get("tx_position", [0, 0, 0])
-            ris_pos = params.get("placement", [0, 0, 5])
-            rx_pos = params.get("rx_position", None)
-
             import numpy as np
-
-            tx_pos = np.array(tx_pos, dtype=float)
-            ris_pos = np.array(ris_pos, dtype=float)
+            tx_pos = np.array(params.get("tx_position", [0, 0, 0]), dtype=float)
+            ris_pos = np.array(params.get("placement", [0, 0, 5]), dtype=float)
             params["distance_tx_ris"] = float(np.linalg.norm(ris_pos - tx_pos))
-
+            rx_pos = params.get("rx_position", None)
             if rx_pos is not None:
                 rx_pos = np.array(rx_pos, dtype=float)
                 params["distance_ris_rx"] = float(np.linalg.norm(rx_pos - ris_pos))
         except Exception:
-            # If anything goes wrong, fall back to whatever was in the JSON
             pass
 
         return params
@@ -88,21 +97,19 @@ def plot_results(results):
     print("Plotting results...")
     os.makedirs('results', exist_ok=True)
 
-    # 1) Plot: SNR vs Number of Elements
     if 'num_elements_list' in results and 'snr_values' in results:
-        plt.figure(figsize=(12, 8))  # Larger figure for better resolution
+        plt.figure(figsize=(12, 8))
         plt.plot(results['num_elements_list'], results['snr_values'], label='SNR', marker='o')
         plt.xlabel('Number of Cells')
         plt.ylabel('SNR (dB)')
         plt.title('SNR vs RIS Resolution (Number of Elements)')
         plt.legend()
         plt.grid(True)
-        plt.savefig('results/snr_vs_elements.png')  # Save plot to file
+        plt.savefig('results/snr_vs_elements.png')
         print("Plot saved to results/snr_vs_elements.png")
         plt.show()
         plt.close()
 
-    # 2) Optional: Plot SNR vs Element Size
     if 'element_size_list' in results and 'snr_element_size' in results:
         plt.figure(figsize=(12, 8))
         plt.plot(results['element_size_list'], results['snr_element_size'], label='SNR', marker='o')
@@ -116,9 +123,7 @@ def plot_results(results):
         plt.show()
         plt.close()
 
-    # 3) Optional: Plot SNR vs Placement (x-coordinate)
     if 'placement_list' in results and 'snr_placement' in results:
-        # For visualization, use the x-coordinate of each placement
         x_coords = [p[0] if isinstance(p, (list, tuple)) and len(p) > 0 else 0 for p in results['placement_list']]
         plt.figure(figsize=(12, 8))
         plt.plot(x_coords, results['snr_placement'], label='SNR', marker='o')

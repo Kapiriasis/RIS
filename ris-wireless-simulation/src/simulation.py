@@ -54,8 +54,19 @@ class Simulation:
 
     def simulate_single_run(self, input_params):
         num_simulations = input_params['num_simulations']
-        noise_power = input_params.get('noise_power', 1)  # in dBm. Default to 1 if not provided
         snr_list = []
+
+        # Link budget parameters
+        tx_power_dbm = input_params.get('tx_power_dbm', 30)  # 1 W default
+        tx_power_w = 10 ** ((tx_power_dbm - 30) / 10)
+        bandwidth_hz = input_params.get('bandwidth_hz', 10e6)
+        noise_figure_db = input_params.get('noise_figure_db', 5)
+        noise_figure_linear = 10 ** (noise_figure_db / 10)
+
+        # Thermal noise power in Watts: k T B * NF
+        k_boltzmann = 1.38064852e-23  # J/K
+        temperature_k = 290.0
+        noise_power_linear = k_boltzmann * temperature_k * bandwidth_hz * noise_figure_linear
 
         # Geometry: TX and RX positions in 3D
         tx_position = np.array(input_params.get('tx_position', [0.0, 0.0, 0.0]))
@@ -77,57 +88,71 @@ class Simulation:
         for _ in range(num_simulations):
             num_elements = self.ris_model.num_elements
 
+            # Direct TX->RX path
+            d_tx_rx = np.linalg.norm(rx_position - tx_position)
+            direct_path_loss_exponent = input_params.get('direct_path_loss_exponent') or input_params['path_loss_exponent']
+            pl_tx_rx = self.channel_model.calculate_path_loss_linear(
+                input_params['frequency'], d_tx_rx, direct_path_loss_exponent
+            )
+            direct_path_loss_factor = input_params.get('direct_path_loss_factor', 1.0)
+            pl_tx_rx = pl_tx_rx * direct_path_loss_factor
+            amp_tx_rx = 1 / np.sqrt(pl_tx_rx)
+            fading_tx_rx = self.channel_model.generate_fading(
+                input_params['fading_type'], 1
+            )[0]
+            phase_tx_rx = np.exp(-1j * k * d_tx_rx)
+            direct_signal = amp_tx_rx * fading_tx_rx * phase_tx_rx
+
             # Distances from TX to each element and from each element to RX
             d_tx_ris = np.linalg.norm(element_positions - tx_position, axis=1)
             d_ris_rx = np.linalg.norm(element_positions - rx_position, axis=1)
 
-            # Path loss per hop (power domain) for each element
             pl_tx_ris = self.channel_model.calculate_path_loss_linear(
                 input_params['frequency'], d_tx_ris, input_params['path_loss_exponent']
             )
             pl_ris_rx = self.channel_model.calculate_path_loss_linear(
                 input_params['frequency'], d_ris_rx, input_params['path_loss_exponent']
             )
-
-            # Convert path loss to amplitude attenuation for each hop (per element)
             amp_tx_ris = 1 / np.sqrt(pl_tx_ris)
             amp_ris_rx = 1 / np.sqrt(pl_ris_rx)
 
-            # Fading per element for each hop
             fading_tx_ris = self.channel_model.generate_fading(
                 input_params['fading_type'], num_elements
             )
             fading_ris_rx = self.channel_model.generate_fading(
                 input_params['fading_type'], num_elements
             )
-
-            # Baseband complex channel per element without RIS phase control:
-            # includes amplitude, fading, and propagation phase for TX->RIS->RX
             total_distance = d_tx_ris + d_ris_rx
             propagation_phase = np.exp(-1j * k * total_distance)
             h_elements = (
                 amp_tx_ris * fading_tx_ris * amp_ris_rx * fading_ris_rx * propagation_phase
             )
 
-            # Phase optimisation at the RIS:
-            # choose reflection phase so that each element's contribution is aligned at RX
+            # Simple element pattern (cosine): power ∝ |cos(θ_inc)|*|cos(θ_refl)|, RIS normal +z
+            if input_params.get('use_element_pattern', True):
+                vec_inc = (element_positions - tx_position) / (d_tx_ris[:, np.newaxis] + 1e-30)
+                vec_refl = (rx_position - element_positions) / (d_ris_rx[:, np.newaxis] + 1e-30)
+                normal = np.array([0.0, 0.0, 1.0])
+                cos_inc = np.dot(vec_inc, normal)
+                cos_refl = np.dot(vec_refl, normal)
+                pattern = np.sqrt(np.maximum(1e-6, np.abs(cos_inc) * np.abs(cos_refl)))
+                h_elements = h_elements * pattern
+
+            # Phase optimisation at the RIS
             optimal_phases = -np.angle(h_elements)
             self.ris_model.set_phase_reflections(optimal_phases)
             reflection_coeffs = self.ris_model.calculate_reflection_coefficient(0, 0)
-
-            # Effective per-element signals after RIS phase control
             element_signals = h_elements * reflection_coeffs
 
-            # Coherent summation of all optimized element contributions at the RX
-            combined_signal = np.sum(element_signals)
+            combined_signal = direct_signal + np.sum(element_signals)
 
             # Received power is the squared magnitude of the combined complex signal
-            received_power = np.abs(combined_signal) ** 2
-            noise_power_linear = 10**(noise_power/10)
+            # scaled by transmit power
+            received_power = (np.abs(combined_signal) ** 2) * tx_power_w
             snr_linear = received_power / noise_power_linear
-            snr_db = 10 * np.log10(snr_linear)
-            snr_list.append(snr_db)
-        return np.mean(snr_list)  # Average SNR over simulations
+            snr_list.append(snr_linear)
+        # Average in linear then convert to dB for a stable, smooth curve
+        return 10 * np.log10(np.mean(snr_list) + 1e-30)
 
     def analyze_results(self, results):
         # Basic analysis: difference between initial and final SNR

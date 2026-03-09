@@ -29,11 +29,18 @@ class ChannelModel:
         return base_pl * additional_loss  # linear
 
     def generate_fading(self, fading_type, num_samples):
+        """
+        Generate complex fading coefficients (unit average power E[|h|^2]=1).
+        Standard Rayleigh: complex Gaussian, so random amplitude and random phase.
+        """
         if fading_type == "Rayleigh":
-            # Rayleigh fading
-            return np.random.rayleigh(1, num_samples)
+            # Complex Rayleigh: (X + j*Y)/sqrt(2), X,Y i.i.d. N(0,1) => E[|h|^2]=1
+            return (np.random.randn(num_samples) + 1j * np.random.randn(num_samples)) / np.sqrt(2)
         elif fading_type == "Rician":
-            # Rician fading (K=1)
-            return np.random.rice(1, num_samples)
+            # Complex Rician (K=1): deterministic + scattered, E[|h|^2]=1
+            K = 1.0
+            los = np.sqrt(K / (1 + K))
+            scatter = (np.random.randn(num_samples) + 1j * np.random.randn(num_samples)) / np.sqrt(2 * (1 + K))
+            return los + scatter
         else:
-            return np.ones(num_samples)  # No fading
+            return np.ones(num_samples, dtype=complex)  # No fading
