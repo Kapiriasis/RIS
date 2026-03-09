@@ -15,7 +15,7 @@ def load_input_parameters(file_path):
             "num_simulations": 10000,
             "fading_type": "Rayleigh",
             "path_loss_exponent": 2.0,
-            "noise_power": 1e-10
+            "noise_power": -90
         }
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, 'w') as file:

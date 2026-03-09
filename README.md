@@ -5,18 +5,19 @@ This project implements a simulation framework for analyzing the performance of 
 ## Project Structure
 
 ```
-ris-wireless-simulation
-├── src
-│   ├── channel_model.py       # Implements the RIS-aided channel model
-│   ├── ris_model.py           # Defines the RIS model and configurations
-│   ├── simulation.py          # Contains the simulation logic
-│   └── utils.py               # Provides utility functions for data processing
+RIS
 ├── data
-│   └── input_parameters.json  # Input parameters for the simulation
-├── results                    # Directory for storing simulation results
-├── requirements.txt           # Required Python packages
-├── main.py                    # Entry point for the simulation
-└── README.md                  # Project documentation
+│   └── input_parameters.json   # Input parameters for the simulation
+├── ris-wireless-simulation
+│   ├── src
+│   │   ├── channel_model.py    # Implements the channel model
+│   │   ├── ris_model.py        # Defines the RIS model and configurations
+│   │   ├── simulation.py       # Contains the simulation logic
+│   │   └── utils.py            # Provides utility functions for data processing
+│   └── main.py                 # Entry point for the simulation
+├── results                     # Directory for storing simulation results
+├── requirements.txt            # Required Python packages
+└── README.md                   # Project documentation
 ```
 
 ## Installation
