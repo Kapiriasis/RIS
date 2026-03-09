@@ -6,17 +6,25 @@ def load_input_parameters(file_path):
     if not os.path.exists(file_path):
         # Create default parameters if file doesn't exist
         default_params = {
+            "num_simulations": 1000,
             # RIS geometry and configuration
             "element_size": 0.5,              # base element size (e.g. in wavelengths or meters)
             "placement": [0, 0, 5],           # default RIS center position [x, y, z]
             "num_elements": 200,              # maximum number of RIS elements
             "layout": "2d",                   # "1d" or "2d" RIS layout
-            "use_element_pattern": True,      # cos(θ) element pattern (False = isotropic)
             # RIS hardware non-idealities
             "reflection_amplitude": 0.9,
+            "reflection_angle_exponent": 0.5,  # angle-dependent |Γ|: (|cos_inc|*|cos_refl|)^exponent; 0 = off
             "phase_quantization_bits": 2,
             "phase_error_std": 0.0,
-            # Optional sweeps for analysis of Part 1
+
+            "use_mutual_coupling": True,       # mutual coupling between RIS elements
+            "coupling_strength": 0.05,         # coupling matrix scale (alpha)
+            "coupling_decay": 1.0,             # decay distance in meters (d0)
+
+            "use_element_pattern": True,      # cos(θ) element pattern (False = isotropic)
+            "pattern_exponent": 1.0,          # gain = |cos(θ)|^pattern_exponent
+            # Optional sweeps for analysis
             "element_size_list": [0.25, 0.5, 1.0],
             "placement_list": [
                 [0, 0, 5],
@@ -26,21 +34,26 @@ def load_input_parameters(file_path):
                 [16, 0, 5],
                 [20, 0, 5]
             ],
+            # Channel and noise parameters
+            "frequency": 2.4e9,
+            "fading_type": "Rayleigh",
+
+            "path_loss_exponent": 2.0,        # for RIS hops (TX-RIS, RIS-RX)
+            "direct_path_loss_exponent": 2.0, # for direct TX-RX (e.g. higher if blocked/NLOS)
+            "direct_path_loss_factor": 1,   # extra blockage factor on direct (>=1)
             # Transmitter / receiver geometry
             "tx_position": [0, 0, 0],
             "rx_position": None,
-            # Channel and noise parameters
-            "frequency": 2.4e9,
             "distance_tx_ris": 10,
             "distance_ris_rx": 10,
-            "num_simulations": 10000,
-            "fading_type": "Rayleigh",
-            "path_loss_exponent": 2.0,        # for RIS hops (TX-RIS, RIS-RX)
-            "direct_path_loss_exponent": 4.0, # for direct TX-RX (e.g. higher if blocked/NLOS)
-            "direct_path_loss_factor": 50,   # extra blockage factor on direct (>=1)
+            # Transmitter / receiver parameters
             "tx_power_dbm": 30,
             "bandwidth_hz": 10e6,
-            "noise_figure_db": 5
+            "noise_figure_db": 5,
+
+            "use_tx_rx_pattern": True,        # TX/RX antenna patterns (False = isotropic)
+            "tx_boresight": None,             # null = point at RIS center; or [x,y,z] unit vector
+            "rx_boresight": None              # null = point at RIS center; or [x,y,z] unit vector
         }
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, 'w') as file:
@@ -57,6 +70,7 @@ def load_input_parameters(file_path):
         params.setdefault("reflection_amplitude", 0.9)
         params.setdefault("phase_quantization_bits", 2)
         params.setdefault("phase_error_std", 0.0)
+        params.setdefault("reflection_angle_exponent", 0.5)
         params.setdefault("frequency", 2.4e9)
         params.setdefault("distance_tx_ris", 10)
         params.setdefault("distance_ris_rx", 10)
@@ -64,9 +78,16 @@ def load_input_parameters(file_path):
         params.setdefault("fading_type", "Rayleigh")
         params.setdefault("path_loss_exponent", 2.0)
         params.setdefault("direct_path_loss_exponent", params.get("path_loss_exponent", 2.0))
-        params.setdefault("direct_path_loss_factor", 50)
+        params.setdefault("direct_path_loss_factor", 1)
         params.setdefault("layout", "2d")
         params.setdefault("use_element_pattern", True)
+        params.setdefault("use_tx_rx_pattern", True)
+        params.setdefault("tx_boresight", None)
+        params.setdefault("rx_boresight", None)
+        params.setdefault("pattern_exponent", 1.0)
+        params.setdefault("use_mutual_coupling", True)
+        params.setdefault("coupling_strength", 0.05)
+        params.setdefault("coupling_decay", 1.0)
         params.setdefault("tx_power_dbm", 30)
         params.setdefault("bandwidth_hz", 10e6)
         params.setdefault("noise_figure_db", 5)

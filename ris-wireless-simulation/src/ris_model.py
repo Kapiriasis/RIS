@@ -11,6 +11,8 @@ class RISModel:
         self.reflection_amplitude = 0.9  # |Γ| < 1 to model losses
         self.phase_quantization_bits = 2  # e.g. 2-bit phase shifters
         self.phase_error_std = 0.0  # random phase error (radians)
+        # Angle-dependent reflection: |Γ| scaled by (|cos_inc|*|cos_refl|)^reflection_angle_exponent
+        self.reflection_angle_exponent = 0.5  # 0 = angle-independent; 0.5 or 1 = common choices
 
     def set_element_size(self, size):
         self.element_size = size
@@ -38,16 +40,24 @@ class RISModel:
         # Set standard deviation of random phase error (in radians).
         self.phase_error_std = float(std_rad)
 
+    def set_reflection_angle_exponent(self, exponent):
+        # Exponent for angle-dependent reflection amplitude: (|cos_inc|*|cos_refl|)^exponent.
+        self.reflection_angle_exponent = float(exponent)
+
     def set_phase_reflections(self, phases):
         self.phases = np.array(phases)
         # self.phases = np.random.uniform(0, 2 * np.pi, self.num_elements)
 
-    def calculate_reflection_coefficient(self, incident_angle, reflected_angle):
+    def calculate_reflection_coefficient(self, cos_incident=None, cos_reflected=None):
         """
         Calculate complex reflection coefficients including non-ideal RIS effects:
         - Common amplitude |Γ| < 1 (reflection_amplitude)
+        - Angle-dependent amplitude: (|cos_inc|*|cos_refl|)^reflection_angle_exponent when angles given
         - Phase quantization to finite bits
         - Optional random phase error
+
+        cos_incident, cos_reflected: arrays of shape (num_elements,) or None.
+        If both provided, amplitude is scaled per element by (|cos_inc|*|cos_refl|)^reflection_angle_exponent.
         """
         phases = np.array(self.phases, copy=True)
 
@@ -61,7 +71,18 @@ class RISModel:
         if self.phase_error_std > 0:
             phases = phases + np.random.normal(0.0, self.phase_error_std, size=self.num_elements)
 
-        reflection_coeff = self.reflection_amplitude * np.exp(1j * phases)
+        amplitude = self.reflection_amplitude * np.ones(self.num_elements, dtype=float)
+        if (
+            self.reflection_angle_exponent != 0
+            and cos_incident is not None
+            and cos_reflected is not None
+        ):
+            cos_inc = np.asarray(cos_incident, dtype=float).ravel()
+            cos_refl = np.asarray(cos_reflected, dtype=float).ravel()
+            product = np.maximum(1e-30, np.abs(cos_inc) * np.abs(cos_refl))
+            amplitude = amplitude * (product ** self.reflection_angle_exponent)
+
+        reflection_coeff = amplitude * np.exp(1j * phases)
         return reflection_coeff
 
     def get_element_positions(self):
@@ -102,4 +123,3 @@ class RISModel:
         positions[:, 1] = placement[1]
         positions[:, 2] = placement[2]
         return positions
-

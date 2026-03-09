@@ -78,12 +78,42 @@ class Simulation:
         else:
             rx_position = np.array(rx_param)
 
-        # RIS element positions (1D linear array centered around RIS placement)
+        # RIS element positions and current RIS center (placement)
         element_positions = self.ris_model.get_element_positions()
+        placement = np.array(self.ris_model.placement, dtype=float)
 
         # Wavelength and wave number
         wavelength = self.channel_model.c / input_params['frequency']
         k = 2 * np.pi / wavelength
+
+        # TX/RX antenna boresights: if null/"auto", point at RIS center so RIS is on boresight
+        def _resolve_boresight(param_value, from_pos, to_pos, default_fallback):
+            auto = param_value is None or param_value == "auto" or (isinstance(param_value, (list, tuple)) and len(param_value) == 0)
+            if auto:
+                vec = to_pos - from_pos
+                n = np.linalg.norm(vec)
+                if n < 1e-9:
+                    d = np.array(default_fallback, dtype=float)
+                    return d / (np.linalg.norm(d) + 1e-30)
+                return vec / n
+            v = np.array(param_value, dtype=float)
+            n = np.linalg.norm(v)
+            return v / (n + 1e-30)
+
+        tx_bor = input_params.get('tx_boresight')
+        rx_bor = input_params.get('rx_boresight')
+        tx_boresight = _resolve_boresight(tx_bor, tx_position, placement, [1.0, 0.0, 0.0])
+        rx_boresight = _resolve_boresight(rx_bor, rx_position, placement, [-1.0, 0.0, 0.0])
+        pattern_exponent = float(input_params.get('pattern_exponent', 1.0))
+
+        # Mutual coupling: strength alpha, decay distance d0 (meters)
+        use_coupling = input_params.get('use_mutual_coupling', True)
+        coupling_strength = float(input_params.get('coupling_strength', 0.05))
+        coupling_decay = float(input_params.get('coupling_decay', 1.0))
+
+        def antenna_gain(unit_direction, boresight, expo):
+            cos_theta = np.abs(np.dot(np.asarray(unit_direction), np.asarray(boresight)))
+            return np.maximum(1e-6, cos_theta) ** expo
 
         for _ in range(num_simulations):
             num_elements = self.ris_model.num_elements
@@ -102,6 +132,13 @@ class Simulation:
             )[0]
             phase_tx_rx = np.exp(-1j * k * d_tx_rx)
             direct_signal = amp_tx_rx * fading_tx_rx * phase_tx_rx
+            # TX/RX antenna patterns on direct path
+            if input_params.get('use_tx_rx_pattern', True):
+                dir_tx_to_rx = (rx_position - tx_position) / (d_tx_rx + 1e-30)
+                dir_rx_from_tx = (tx_position - rx_position) / (d_tx_rx + 1e-30)
+                g_tx_d = antenna_gain(dir_tx_to_rx, tx_boresight, pattern_exponent)
+                g_rx_d = antenna_gain(dir_rx_from_tx, rx_boresight, pattern_exponent)
+                direct_signal = direct_signal * np.sqrt(g_tx_d * g_rx_d)
 
             # Distances from TX to each element and from each element to RX
             d_tx_ris = np.linalg.norm(element_positions - tx_position, axis=1)
@@ -128,21 +165,41 @@ class Simulation:
                 amp_tx_ris * fading_tx_ris * amp_ris_rx * fading_ris_rx * propagation_phase
             )
 
+            # Incident/reflected directions and cos(θ) w.r.t. RIS normal (+z) for each element
+            vec_inc = (element_positions - tx_position) / (d_tx_ris[:, np.newaxis] + 1e-30)
+            vec_refl = (rx_position - element_positions) / (d_ris_rx[:, np.newaxis] + 1e-30)
+            normal = np.array([0.0, 0.0, 1.0])
+            cos_inc = np.dot(vec_inc, normal)
+            cos_refl = np.dot(vec_refl, normal)
+
             # Simple element pattern (cosine): power ∝ |cos(θ_inc)|*|cos(θ_refl)|, RIS normal +z
             if input_params.get('use_element_pattern', True):
-                vec_inc = (element_positions - tx_position) / (d_tx_ris[:, np.newaxis] + 1e-30)
-                vec_refl = (rx_position - element_positions) / (d_ris_rx[:, np.newaxis] + 1e-30)
-                normal = np.array([0.0, 0.0, 1.0])
-                cos_inc = np.dot(vec_inc, normal)
-                cos_refl = np.dot(vec_refl, normal)
                 pattern = np.sqrt(np.maximum(1e-6, np.abs(cos_inc) * np.abs(cos_refl)))
                 h_elements = h_elements * pattern
+
+            # TX/RX antenna patterns on RIS path (per element)
+            if input_params.get('use_tx_rx_pattern', True):
+                dir_tx_to_ris = (element_positions - tx_position) / (d_tx_ris[:, np.newaxis] + 1e-30)
+                dir_rx_from_ris = (element_positions - rx_position) / (d_ris_rx[:, np.newaxis] + 1e-30)
+                g_tx_ris = np.maximum(1e-6, np.abs(np.dot(dir_tx_to_ris, tx_boresight))) ** pattern_exponent
+                g_rx_ris = np.maximum(1e-6, np.abs(np.dot(dir_rx_from_ris, rx_boresight))) ** pattern_exponent
+                h_elements = h_elements * np.sqrt(g_tx_ris * g_rx_ris)
 
             # Phase optimisation at the RIS
             optimal_phases = -np.angle(h_elements)
             self.ris_model.set_phase_reflections(optimal_phases)
-            reflection_coeffs = self.ris_model.calculate_reflection_coefficient(0, 0)
+            reflection_coeffs = self.ris_model.calculate_reflection_coefficient(
+                cos_incident=cos_inc, cos_reflected=cos_refl
+            )
             element_signals = h_elements * reflection_coeffs
+
+            # Mutual coupling between RIS elements: s_coupled = (I + alpha*K) @ s, K_ij = exp(-d_ij/d0)
+            if use_coupling and num_elements > 1 and coupling_strength != 0:
+                d_ij = np.linalg.norm(element_positions[:, np.newaxis, :] - element_positions[np.newaxis, :, :], axis=2)
+                np.fill_diagonal(d_ij, np.inf)
+                K = np.exp(-d_ij / (coupling_decay + 1e-30))
+                coupling_matrix = np.eye(num_elements) + coupling_strength * K
+                element_signals = coupling_matrix @ element_signals
 
             combined_signal = direct_signal + np.sum(element_signals)
 

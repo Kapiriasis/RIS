@@ -5,9 +5,7 @@ class ChannelModel:
         self.c = 3e8  # Speed of light
 
     def calculate_path_loss(self, frequency, distance, path_loss_exponent):
-        """
-        Path loss in dB for scalar or array distances (array-safe).
-        """
+        # Path loss in dB for scalar or array distances (array-safe).
         lambda_ = self.c / frequency
         distance = np.asarray(distance, dtype=float)
         base_loss_db = 20 * np.log10(np.maximum((4 * np.pi * distance / lambda_) ** 2, 1e-30))
