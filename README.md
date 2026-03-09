@@ -8,6 +8,7 @@ This project implements a simulation framework for analyzing the performance of 
 RIS
 ├── data
 │   └── input_parameters.json   # Input parameters for the simulation
+├── results                     # Directory for storing simulation results
 ├── ris-wireless-simulation
 │   ├── src
 │   │   ├── channel_model.py    # Implements the channel model
@@ -15,9 +16,8 @@ RIS
 │   │   ├── simulation.py       # Contains the simulation logic
 │   │   └── utils.py            # Provides utility functions for data processing
 │   └── main.py                 # Entry point for the simulation
-├── results                     # Directory for storing simulation results
-├── requirements.txt            # Required Python packages
-└── README.md                   # Project documentation
+├── README.md                   # Project documentation
+└── requirements.txt            # Required Python packages
 ```
 
 ## Installation
