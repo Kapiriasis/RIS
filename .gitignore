@@ -28,7 +28,7 @@ desktop.ini
 
 # Simulation outputs, data, logs
 results/
-data/*.json
+data/
 *.log
 
 # Misc
