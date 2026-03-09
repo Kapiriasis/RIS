@@ -155,6 +155,9 @@ class Simulation:
         return 10 * np.log10(np.mean(snr_list) + 1e-30)
 
     def analyze_results(self, results):
-        # Basic analysis: difference between initial and final SNR
-        snr_difference = results['snr_values'][-1] - results['snr_values'][0]
+        snr_values = results.get('snr_values', [])
+        if len(snr_values) < 2:
+            print("Not enough SNR points to compute difference (need at least 2).")
+            return
+        snr_difference = snr_values[-1] - snr_values[0]
         print(f"SNR Difference: {snr_difference:.2f} dB")
