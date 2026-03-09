@@ -28,8 +28,8 @@ DEFAULT_PARAMS = {
     # Channel and noise parameters
     "frequency": 2.4e9,
     "fading_type": "Rayleigh",
-    "path_loss_exponent": 2.0,          # for RIS hops (TX-RIS, RIS-RX)
-    "direct_path_loss_exponent": 2.0,   # for direct TX-RX (e.g. higher if blocked/NLOS)
+    "path_loss_exponent": 4.0,          # for RIS hops (TX-RIS, RIS-RX)
+    "direct_path_loss_exponent": 4.0,   # for direct TX-RX (e.g. higher if blocked/NLOS)
     "direct_path_loss_factor": 1,       # extra blockage factor on direct (>=1)
     # Transmitter / receiver geometry
     "tx_position": [0, 0, 0],
