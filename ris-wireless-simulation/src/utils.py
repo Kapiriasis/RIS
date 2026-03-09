@@ -106,10 +106,10 @@ def plot_results(results):
         _plot_one(
             results['num_elements_list'],
             results['snr_values'],
-            'Number of Cells',
+            'Number of Elements',
             'SNR (dB)',
-            'SNR vs RIS Resolution (Number of Elements)',
-            'results/snr_vs_elements.png',
+            'SNR vs RIS Resolution',
+            'results/snr_vs_resolution.png',
         )
 
     if 'element_size_list' in results and 'snr_element_size' in results:
@@ -119,7 +119,7 @@ def plot_results(results):
             'Element Size (wavelengths)',
             'SNR (dB)',
             'SNR vs RIS Element Size',
-            'results/snr_vs_element_size.png',
+            'results/snr_vs_size.png',
         )
 
     if 'placement_list' in results and 'snr_placement' in results:
@@ -130,8 +130,8 @@ def plot_results(results):
         _plot_one(
             x_coords,
             results['snr_placement'],
-            'RIS x-position',
+            'RIS X-Position',
             'SNR (dB)',
-            'SNR vs RIS Placement (x-axis)',
+            'SNR vs RIS Placement',
             'results/snr_vs_placement_x.png',
         )
