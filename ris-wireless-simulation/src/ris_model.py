@@ -5,7 +5,7 @@ class RISModel:
         self.element_size = 0.5  # Default
         self.placement = [0, 0, 5]  # Default position
         self.num_elements = 100
-        self.phases = np.zeros(self.num_elements)  # Phase shifts
+        self.phases = np.zeros(self.num_elements)  # Phase shifts (radians)
 
     def set_element_size(self, size):
         self.element_size = size
@@ -18,11 +18,27 @@ class RISModel:
         self.phases = np.zeros(num)
 
     def set_phase_reflections(self, phases):
-        # self.phases = np.array(phases)
-        self.phases = np.random.uniform(0, 2 * np.pi, self.num_elements)
+        self.phases = np.array(phases)
+        # self.phases = np.random.uniform(0, 2 * np.pi, self.num_elements)
 
     def calculate_reflection_coefficient(self, incident_angle, reflected_angle):
         # Simplified reflection with phase
         # Assuming perfect reflection with adjustable phase
         reflection_coeff = np.exp(1j * self.phases)
         return reflection_coeff
+
+    def get_element_positions(self):
+        """
+        Return Cartesian positions of all RIS elements.
+
+        Elements are arranged in a 1D uniform linear array along the x-axis,
+        centered around the RIS placement.
+        """
+        positions = np.zeros((self.num_elements, 3))
+        indices = np.arange(self.num_elements)
+        # Center the array around placement[0]
+        offsets_x = (indices - (self.num_elements - 1) / 2.0) * self.element_size
+        positions[:, 0] = self.placement[0] + offsets_x
+        positions[:, 1] = self.placement[1]
+        positions[:, 2] = self.placement[2]
+        return positions

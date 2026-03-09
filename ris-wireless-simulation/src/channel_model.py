@@ -12,10 +12,20 @@ class ChannelModel:
         return base_loss_db + additional_loss_db  # dB
 
     def calculate_path_loss_linear(self, frequency, distance, path_loss_exponent):
-        # Linear path loss: (4 * pi * distance / lambda)^2 * distance^(path_loss_exponent - 2)
+        """
+        Linear path loss for scalar or array distances.
+
+        Uses a generalized Friis-like model:
+            PL(d) = (4 * pi * d / lambda)^2 * d^(path_loss_exponent - 2),  d > 1
+            PL(d) = (4 * pi * d / lambda)^2,                               d <= 1
+        """
         lambda_ = self.c / frequency
+        distance = np.asarray(distance)
         base_pl = (4 * np.pi * distance / lambda_) ** 2
-        additional_loss = distance ** (path_loss_exponent - 2) if distance > 1 else 1
+        # Handle both scalar and array distances without ambiguous truth value
+        additional_loss = np.where(
+            distance > 1, distance ** (path_loss_exponent - 2), 1.0
+        )
         return base_pl * additional_loss  # linear
 
     def generate_fading(self, fading_type, num_samples):
