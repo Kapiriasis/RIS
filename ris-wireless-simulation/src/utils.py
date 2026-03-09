@@ -41,8 +41,8 @@ DEFAULT_PARAMS = {
     "bandwidth_hz": 10e6,
     "noise_figure_db": 5,
     "use_tx_rx_pattern": True,          # TX/RX antenna patterns (False = isotropic)
-    "tx_boresight": None,               # null = point at RIS center; or [x,y,z] unit vector
-    "rx_boresight": None,               # null = point at RIS center; or [x,y,z] unit vector
+    "tx_boresight": None,               # null = point at RIS center; or [1, 0, 0] to point at RX
+    "rx_boresight": None,               # null = point at RIS center; or [-1, 0, 0] to point at TX
     "random_seed": None,                # integer for reproducible runs; null = do not set
 }
 
