@@ -6,7 +6,7 @@ import os
 DEFAULT_PARAMS = {
     "num_simulations": 1000,
     # RIS geometry and configuration
-    "element_size": 0.5,                # base element size (e.g. in wavelengths or meters)
+    "element_size": 0.5,                # base element size (in wavelengths)
     "placement": [0, 0, 5],             # default RIS center position [x, y, z]
     "num_elements": 200,                # maximum number of RIS elements
     "layout": "2d",                     # "1d" or "2d" RIS layout
@@ -16,18 +16,19 @@ DEFAULT_PARAMS = {
     "phase_quantization_bits": 2,
     "phase_error_std": 0.0,
     # Mutual coupling
-    "use_mutual_coupling": True,        # mutual coupling between RIS elements
+    "use_mutual_coupling": True,
     "coupling_strength": 0.05,          # coupling matrix scale (alpha)
     "coupling_decay": 1.0,              # decay distance in meters (d0)
     # Element and antenna patterns
     "use_element_pattern": True,        # cos(θ) element pattern (False = isotropic)
+    "use_tx_rx_pattern": True,          # TX/RX antenna patterns (False = isotropic)
     "pattern_exponent": 1.0,            # gain = |cos(θ)|^pattern_exponent
     # Optional sweeps for analysis
     "element_size_list": [0.25, 0.5, 1.0],
     "placement_list": [[0, 0, 5], [4, 0, 5], [8, 0, 5], [12, 0, 5], [16, 0, 5], [20, 0, 5]],
     # Channel and noise parameters
     "frequency": 2.4e9,
-    "fading_type": "Rayleigh",
+    "fading_type": "Rician",          # "Rayleigh", "Rician", or "None"
     "path_loss_exponent": 4.0,          # for RIS hops (TX-RIS, RIS-RX)
     "direct_path_loss_exponent": 4.0,   # for direct TX-RX (e.g. higher if blocked/NLOS)
     "direct_path_loss_factor": 1,       # extra blockage factor on direct (>=1)
@@ -40,9 +41,8 @@ DEFAULT_PARAMS = {
     "tx_power_dbm": 30,
     "bandwidth_hz": 10e6,
     "noise_figure_db": 5,
-    "use_tx_rx_pattern": True,          # TX/RX antenna patterns (False = isotropic)
-    "tx_boresight": None,               # null = point at RIS center; or [1, 0, 0] to point at RX
-    "rx_boresight": None,               # null = point at RIS center; or [-1, 0, 0] to point at TX
+    "tx_boresight": None,               # None = point at RIS center; or [1, 0, 0] to point at RX
+    "rx_boresight": None,               # None = point at RIS center; or [-1, 0, 0] to point at TX
 }
 
 def load_input_parameters(file_path):
