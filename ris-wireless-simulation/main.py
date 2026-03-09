@@ -24,13 +24,7 @@ def main():
 
     channel_model = ChannelModel()
     ris_model = RISModel()
-    ris_model.set_num_elements(input_params['num_elements'])
-    ris_model.set_placement(input_params['placement'])
-    ris_model.set_layout(input_params.get('layout', '2d'))
-    ris_model.set_reflection_amplitude(input_params.get('reflection_amplitude', 0.9))
-    ris_model.set_phase_quantization_bits(input_params.get('phase_quantization_bits', 2))
-    ris_model.set_phase_error_std(input_params.get('phase_error_std', 0.0))
-    ris_model.set_reflection_angle_exponent(input_params.get('reflection_angle_exponent', 0.5))
+    ris_model.configure_from_params(input_params)
 
     simulation = Simulation(channel_model, ris_model)
     results = simulation.run_simulation(input_params)

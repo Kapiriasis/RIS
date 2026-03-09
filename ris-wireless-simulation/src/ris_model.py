@@ -44,6 +44,16 @@ class RISModel:
         # Exponent for angle-dependent reflection amplitude: (|cos_inc|*|cos_refl|)^exponent.
         self.reflection_angle_exponent = float(exponent)
 
+    def configure_from_params(self, params):
+        """Set all RIS parameters from a config dict (e.g. from load_input_parameters)."""
+        self.set_num_elements(params.get('num_elements', 200))
+        self.set_placement(params.get('placement', [0, 0, 5]))
+        self.set_layout(params.get('layout', '2d'))
+        self.set_reflection_amplitude(params.get('reflection_amplitude', 0.9))
+        self.set_phase_quantization_bits(params.get('phase_quantization_bits', 2))
+        self.set_phase_error_std(params.get('phase_error_std', 0.0))
+        self.set_reflection_angle_exponent(params.get('reflection_angle_exponent', 0.5))
+
     def set_phase_reflections(self, phases):
         self.phases = np.array(phases)
         # self.phases = np.random.uniform(0, 2 * np.pi, self.num_elements)
