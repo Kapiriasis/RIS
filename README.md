@@ -1,23 +1,19 @@
 # Simulation and Performance Analysis of Reconfigurable Intelligent Surfaces for Next-Generation Wireless Networks
 
-This repository contains the simulation code for the thesis. **Part 1** implements a baseline wireless system: direct link (S→D) and conventional relay (S→R→D, AF/DF). RIS will be added in a later part.
+Reconfigurable Intelligent Surfaces (RIS) are a key enabler for 6G wireless systems, capable of intelligently controlling the propagation of electromagnetic waves to enhance coverage, spectral efficiency and energy efficiency. This project will model and simulate RIS-assisted wireless communication systems, focusing on how RIS can improve link quality compared to traditional wireless channels. The project will involve implementing RIS-aided channel models in MATLAB/Python, simulating different RIS configurations and analyzing system performance in terms of SNR, capacity and energy efficiency.
 
 ## Project structure
 
 ```
 thesis_code/
 ├── config/
-│   └── params.py          # Simulation parameters (freq, distances, trials, etc.)
+│   └── params.json     # Simulation Parameters
 ├── src/
-│   ├── channel/           # Path loss and fading models
-│   ├── links/             # Direct and relay link models
-│   ├── utils/             # dB conversions, noise power
-│   └── run/               # Baseline Monte Carlo runner
+│   └──
 ├── scripts/
-│   ├── run_baseline.py    # Run baseline simulation
-│   └── plot_results.py   # Plot outage vs Tx power (example)
-├── results/               # Outputs (gitignored)
-├── requirements.txt
+│   └──
+├── results/
+├── requirements.txt    #
 └── README.md
 ```
 
@@ -26,8 +22,6 @@ thesis_code/
 ```bash
 pip install -r requirements.txt
 ```
-
-Requires Python 3.10+ (for `float | np.ndarray` type hints; adjust if using an older interpreter).
 
 ## Running the baseline (Part 1)
 
