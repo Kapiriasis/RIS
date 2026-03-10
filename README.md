@@ -23,28 +23,12 @@ thesis_code/
 pip install -r requirements.txt
 ```
 
-## Running the baseline (Part 1)
+## Running 
 
-From the project root:
 
-```bash
-python scripts/run_baseline.py
-```
 
-This runs a Monte Carlo simulation for the direct and relay (AF) links and writes a summary to `results/baseline_summary.txt`.
-
-To generate an example outage vs Tx power plot:
-
-```bash
-python scripts/plot_results.py
-```
-
-Plots are saved under `results/` (e.g. `outage_vs_tx_power.pdf`, `.png`).
+Plots are saved under `results/`
 
 ## Configuration
 
-Edit `config/params.py` to change carrier frequency, distances (S–D, S–R, R–D), transmit power, SNR threshold, number of trials, and output directory.
-
-## License
-
-See repository or thesis for license and attribution.
+Edit `config/params.json`
