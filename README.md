@@ -7,13 +7,15 @@ Reconfigurable Intelligent Surfaces (RIS) are a key enabler for 6G wireless syst
 ```
 thesis_code/
 ├── config/
-│   └── params.json     # Simulation Parameters
+│   └── params.json
 ├── src/
-│   └──
+│   ├── channel.py
+│   └── utils.py
 ├── scripts/
-│   └──
+│   ├── run_base.py
+|   └── run_relay.py
 ├── results/
-├── requirements.txt    #
+├── requirements.txt
 └── README.md
 ```
 
