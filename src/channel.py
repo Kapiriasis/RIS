@@ -24,5 +24,5 @@ def noise_power(bandwidth):
     return P_noise
 
 def gain(L0, h):
-    G = L0 * abs(h) ** 2
+    G = (1 / L0) * abs(h) ** 2
     return G

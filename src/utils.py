@@ -6,7 +6,6 @@ def db2lin(dB):
 def lin2db(lin):
     return 10. * np.log10(lin)
 
-
 def snr_linear(P_tx, gain, P_noise):
     snr = (P_tx * gain) / P_noise
     return snr
