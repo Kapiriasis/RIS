@@ -5,12 +5,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PARAMS_PATH = os.path.join(ROOT, "data", "params.json")
 
 DEFAULT_PARAMS = {
-    "distance": 20,
-    "frequency": 2.4e9,
-    "K_dB": 15,
-    "N": 1000,
-    "path_loss_exponent": 4.0,
-    "bandwidth": 20e6,
+    "P_tx": 0.1,                # wifi access point: 100 mW, base station: 10 W
+    "frequency": 2.4e9,         # 2.4 GHz
+    "bandwidth": 20e6,          # 20 MHz
+    "N": 1000,                  # number of samples
+    "K_dB": 15,                 # outdoor: 10 - 15, indoor: 0 - 6, 
+    "path_loss_exponent": 4.0,  # free space: 2, outdoor: 4, indoor: 6
+    "distance": 20,             # meters
 }
 
 def generate_params(params=None, path=None):
