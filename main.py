@@ -6,7 +6,7 @@ from scripts.relay import run_relay_df
 from src.datagen import PARAMS_PATH, generate_params
 
 def load_params() -> dict:
-    """Ensure params.json exists and is non-empty, then load it."""
+    # Ensure params.json exists and is non-empty, then load it.
     exists = os.path.exists(PARAMS_PATH)
     size = os.path.getsize(PARAMS_PATH) if exists else 0
 

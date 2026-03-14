@@ -22,7 +22,7 @@ def run_relay_df(params: Dict[str, Any], results_dir: Optional[str] = None) -> D
     K_dB = params["K_dB"]
     d_total = params["distance"]
 
-    # Two equal hops: Tx->Relay and Relay->Rx
+    # Two equal hops: Tx -> Relay and Relay -> Rx
     d1 = d_total / 2.0
     d2 = d_total / 2.0
 

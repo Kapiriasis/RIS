@@ -14,7 +14,6 @@ DEFAULT_PARAMS = {
     "distance": 20,             # meters
 }
 
-
 def generate_params(params=None, path=None):
     path = path or PARAMS_PATH
     params = params if params is not None else DEFAULT_PARAMS.copy()
