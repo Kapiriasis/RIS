@@ -1,6 +1,5 @@
 import json
 import os
-
 from scripts.direct import run_direct
 from scripts.ris import run_ris
 from scripts.relay import run_relay_df

@@ -1,6 +1,6 @@
 import os
-from typing import Any, Dict, Optional
 import numpy as np
+from typing import Any, Dict, Optional
 from src.channel import (free_space_path_loss, gain, log_distance_path_loss, noise_power, rician_fading)
 from src.plot import plot_capacity_hist, plot_snr_cdf
 from src.utils import capacity, db2lin, lin2db, snr_linear
