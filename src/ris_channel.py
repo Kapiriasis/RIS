@@ -1,18 +1,9 @@
 import numpy as np
-
 from src.channel import free_space_path_loss, noise_power, rician_fading
 from src.ris_element import ris_element_coefficient
 from src.utils import capacity, lin2db, snr_linear
 
-
 def ris_link_distances(total_distance, ris_position):
-    """
-    Split Tx-Rx distance into Tx-RIS and RIS-Rx distances.
-
-    Args:
-        total_distance: Tx-Rx distance [m]
-        ris_position: Tx-RIS distance [m]
-    """
     d_tx_ris = float(ris_position)
     d_ris_rx = float(total_distance) - d_tx_ris
 
@@ -20,7 +11,6 @@ def ris_link_distances(total_distance, ris_position):
         raise ValueError("ris_position must satisfy 0 < ris_position < total_distance.")
 
     return d_tx_ris, d_ris_rx
-
 
 def ris_phase_profile(h_tx_ris, h_ris_rx, n_bits=None):
     """
@@ -32,7 +22,6 @@ def ris_phase_profile(h_tx_ris, h_ris_rx, n_bits=None):
     """
     target_phase = -(np.angle(h_tx_ris) + np.angle(h_ris_rx))
     return ris_element_coefficient(phase_rad=target_phase, amplitude=1.0, n_bits=n_bits)
-
 
 def ris_cascaded_channel(h_tx_ris, h_ris_rx, gamma, L_tx_ris, L_ris_rx):
     """
@@ -50,7 +39,6 @@ def ris_cascaded_channel(h_tx_ris, h_ris_rx, gamma, L_tx_ris, L_ris_rx):
 
     large_scale = np.sqrt((1.0 / float(L_tx_ris)) * (1.0 / float(L_ris_rx)))
     return large_scale * np.sum(g * h1 * h2, axis=0)
-
 
 def simulate_ris_link(params, include_direct=False):
     """
@@ -97,10 +85,10 @@ def simulate_ris_link(params, include_direct=False):
     snr = snr_linear(P_tx, G_eff, P_noise)
     C = capacity(snr, B)
 
-    outage_threshold = 1.0  # 0 dB in linear scale
+    outage_threshold = 10.0 ** (5.0 / 10.0)  # 5 dB in linear scale
     metrics = {
         "mean_snr_db": float(lin2db(np.mean(snr))),
-        "outage_prob_0dB": float(np.mean(snr < outage_threshold)),
+        "outage_prob_5dB": float(np.mean(snr < outage_threshold)),
         "mean_capacity_bits_per_s": float(np.mean(C)),
     }
 

@@ -3,7 +3,7 @@ from numpy.random import standard_normal
 from src.utils import db2lin
 
 def free_space_path_loss(distance, frequency):
-    L0 = (4 * np.pi * distance) / (3e8 / frequency) ** 2
+    L0 = ((4 * np.pi * distance) / (3e8 / frequency)) ** 2
     return L0
 
 def rician_fading(K_dB, N):

@@ -1,16 +1,12 @@
 import os
-from typing import Any, Dict, Optional
-
 import numpy as np
-
+from typing import Any, Dict, Optional
 from src.plot import plot_capacity_hist, plot_snr_cdf, plot_snr_vs_elements
 from src.ris_channel import simulate_ris_link
-
 
 def _default_results_dir() -> str:
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(root, "results")
-
 
 def run_ris(params: Dict[str, Any], results_dir: Optional[str] = None) -> Dict[str, Any]:
     """

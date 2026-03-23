@@ -32,13 +32,18 @@ def main() -> None:
 
     # Run RIS-assisted link
     ris_metrics = run_ris(params)
+    ris_summary = {
+        "mean_snr_db": ris_metrics["mean_snr_db"],
+        "outage_prob_5dB": ris_metrics["outage_prob_5dB"],
+        "mean_capacity_bits_per_s": ris_metrics["mean_capacity_bits_per_s"],
+    }
 
     print("=== Direct link metrics ===")
     print(direct_metrics)
     print("\n=== Relay (DF) metrics ===")
     print(relay_metrics)
     print("\n=== RIS metrics ===")
-    print(ris_metrics)
+    print(ris_summary)
 
 if __name__ == "__main__":
     main()

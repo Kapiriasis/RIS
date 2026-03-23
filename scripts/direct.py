@@ -31,7 +31,7 @@ def run_direct(params: Dict[str, Any], results_dir: Optional[str] = None) -> Dic
     C = capacity(snr, B)
 
     mean_snr_db = float(lin2db(np.mean(snr)))
-    outage_threshold_db = 0.0
+    outage_threshold_db = 5.0
     outage_threshold = 10.0 ** (outage_threshold_db / 10.0)
     outage_prob = float(np.mean(snr < outage_threshold))
     mean_capacity = float(np.mean(C))
@@ -44,6 +44,6 @@ def run_direct(params: Dict[str, Any], results_dir: Optional[str] = None) -> Dic
 
     return {
         "mean_snr_db": mean_snr_db,
-        "outage_prob_0dB": outage_prob,
+        "outage_prob_5dB": outage_prob,
         "mean_capacity_bits_per_s": mean_capacity,
     }
