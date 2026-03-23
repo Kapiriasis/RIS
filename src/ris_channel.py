@@ -1,7 +1,7 @@
 import numpy as np
-from src.channel import free_space_path_loss, noise_power, rician_fading
+from src.channel import free_space_path_loss, log_distance_path_loss, noise_power, rician_fading
 from src.ris_element import ris_element_coefficient
-from src.utils import capacity, lin2db, snr_linear
+from src.utils import capacity, db2lin, lin2db, snr_linear
 
 def ris_link_distances(total_distance, ris_position):
     d_tx_ris = float(ris_position)
@@ -37,8 +37,10 @@ def ris_cascaded_channel(h_tx_ris, h_ris_rx, gamma, L_tx_ris, L_ris_rx):
     if h1.shape != h2.shape or h1.shape != g.shape:
         raise ValueError("h_tx_ris, h_ris_rx, and gamma must have the same shape [M, N].")
 
-    large_scale = np.sqrt((1.0 / float(L_tx_ris)) * (1.0 / float(L_ris_rx)))
-    return large_scale * np.sum(g * h1 * h2, axis=0)
+    L1 = np.asarray(L_tx_ris)
+    L2 = np.asarray(L_ris_rx)
+    large_scale = np.sqrt((1.0 / L1) * (1.0 / L2))
+    return np.sum(large_scale * g * h1 * h2, axis=0)
 
 def simulate_ris_link(params, include_direct=False):
     """
@@ -58,14 +60,19 @@ def simulate_ris_link(params, include_direct=False):
     M = int(params["ris_array_size"])
     ris_pos = params["ris_position"]
     n_bits = params.get("ris_phase_bits", None)
+    n_exp = params["path_loss_exponent"]
 
     d_tx_ris, d_ris_rx = ris_link_distances(d_total, ris_pos)
-    L_tx_ris = free_space_path_loss(d_tx_ris, f_c)
-    L_ris_rx = free_space_path_loss(d_ris_rx, f_c)
 
     # Small-scale fading for each RIS element and each Monte-Carlo sample [M, N].
     h_tx_ris = np.vstack([rician_fading(K_dB, N) for _ in range(M)])
     h_ris_rx = np.vstack([rician_fading(K_dB, N) for _ in range(M)])
+
+    Xg_tx_ris_dB = lin2db(np.abs(np.vstack([rician_fading(K_dB, N) for _ in range(M)])) ** 2)
+    Xg_ris_rx_dB = lin2db(np.abs(np.vstack([rician_fading(K_dB, N) for _ in range(M)])) ** 2)
+    L0_ref_dB = lin2db(free_space_path_loss(10.0, f_c))
+    L_tx_ris = db2lin(log_distance_path_loss(L0_ref_dB, Xg_tx_ris_dB, n_exp, d_tx_ris))
+    L_ris_rx = db2lin(log_distance_path_loss(L0_ref_dB, Xg_ris_rx_dB, n_exp, d_ris_rx))
 
     gamma = ris_phase_profile(h_tx_ris, h_ris_rx, n_bits=n_bits)
     h_ris = ris_cascaded_channel(h_tx_ris, h_ris_rx, gamma, L_tx_ris, L_ris_rx)
@@ -73,7 +80,8 @@ def simulate_ris_link(params, include_direct=False):
     # Optional direct path contribution.
     use_direct = include_direct or params.get("include_direct", False)
     if use_direct:
-        L_direct = free_space_path_loss(d_total, f_c)
+        Xg_direct_dB = lin2db(np.abs(rician_fading(K_dB, N)) ** 2)
+        L_direct = db2lin(log_distance_path_loss(L0_ref_dB, Xg_direct_dB, n_exp, d_total))
         h_direct = np.sqrt(1.0 / L_direct) * rician_fading(K_dB, N)
         h_eff = h_direct + h_ris
     else:

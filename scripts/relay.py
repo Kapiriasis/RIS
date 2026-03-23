@@ -1,10 +1,9 @@
 import os
 from typing import Any, Dict, Optional
 import numpy as np
-
-from src.channel import free_space_path_loss, gain, noise_power, rician_fading
+from src.channel import (free_space_path_loss, gain, log_distance_path_loss, noise_power, rician_fading)
 from src.plot import plot_capacity_hist, plot_snr_cdf
-from src.utils import capacity, lin2db, snr_linear
+from src.utils import capacity, db2lin, lin2db, snr_linear
 
 def _default_results_dir() -> str:
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,19 +20,25 @@ def run_relay_df(params: Dict[str, Any], results_dir: Optional[str] = None) -> D
     N = params["N"]
     K_dB = params["K_dB"]
     d_total = params["distance"]
+    n_exp = params["path_loss_exponent"]
 
     # Two equal hops: Tx -> Relay and Relay -> Rx
     d1 = d_total / 2.0
     d2 = d_total / 2.0
 
     # Hop 1
-    L0_1 = free_space_path_loss(d1, f_c)
     h1 = rician_fading(K_dB, N)
+    Xg1_dB = lin2db(np.abs(rician_fading(K_dB, N)) ** 2)
+    L0_ref_dB = lin2db(free_space_path_loss(10.0, f_c))
+    L1_dB = log_distance_path_loss(L0_ref_dB, Xg1_dB, n_exp, d1)
+    L0_1 = db2lin(L1_dB)
     G1 = gain(L0_1, h1)
 
     # Hop 2
-    L0_2 = free_space_path_loss(d2, f_c)
     h2 = rician_fading(K_dB, N)
+    Xg2_dB = lin2db(np.abs(rician_fading(K_dB, N)) ** 2)
+    L2_dB = log_distance_path_loss(L0_ref_dB, Xg2_dB, n_exp, d2)
+    L0_2 = db2lin(L2_dB)
     G2 = gain(L0_2, h2)
 
     P_noise = noise_power(B)

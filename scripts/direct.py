@@ -1,10 +1,9 @@
 import os
 from typing import Any, Dict, Optional
 import numpy as np
-
-from src.channel import free_space_path_loss, gain, noise_power, rician_fading
+from src.channel import (free_space_path_loss, gain, log_distance_path_loss, noise_power, rician_fading)
 from src.plot import plot_capacity_hist, plot_snr_cdf
-from src.utils import capacity, lin2db, snr_linear
+from src.utils import capacity, db2lin, lin2db, snr_linear
 
 def _default_results_dir() -> str:
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,9 +20,14 @@ def run_direct(params: Dict[str, Any], results_dir: Optional[str] = None) -> Dic
     N = params["N"]
     K_dB = params["K_dB"]
     d = params["distance"]
+    n_exp = params["path_loss_exponent"]
 
-    L0 = free_space_path_loss(d, f_c)
     h = rician_fading(K_dB, N)
+    # Use a Rician-derived random dB term as Xg in the log-distance model.
+    Xg_dB = lin2db(np.abs(rician_fading(K_dB, N)) ** 2)
+    L0_dB = lin2db(free_space_path_loss(10.0, f_c))
+    L_dB = log_distance_path_loss(L0_dB, Xg_dB, n_exp, d)
+    L0 = db2lin(L_dB)
     G = gain(L0, h)
 
     P_noise = noise_power(B)

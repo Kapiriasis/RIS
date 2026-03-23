@@ -14,7 +14,7 @@ def rician_fading(K_dB, N):
     return h
 
 def log_distance_path_loss(L0, Xg, path_loss_exponent, distance):
-    L_dB = L0 + 10 * path_loss_exponent * np.log10(distance / 1000) + Xg
+    L_dB = L0 + 10 * path_loss_exponent * np.log10(distance / 10) + Xg
     return L_dB
 
 def noise_power(bandwidth):
