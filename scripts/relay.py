@@ -21,6 +21,7 @@ def run_relay_df(params: Dict[str, Any], results_dir: Optional[str] = None) -> D
     K_dB = params["K_dB"]
     d_total = params["distance"]
     n_exp = params["path_loss_exponent"]
+    sigma_shadow_dB = params.get("shadowing_sigma_dB", 4.0)
 
     # Two equal hops: Tx -> Relay and Relay -> Rx
     d1 = d_total / 2.0
@@ -28,7 +29,7 @@ def run_relay_df(params: Dict[str, Any], results_dir: Optional[str] = None) -> D
 
     # Hop 1
     h1 = rician_fading(K_dB, N)
-    Xg1_dB = lin2db(np.abs(rician_fading(K_dB, N)) ** 2)
+    Xg1_dB = sigma_shadow_dB * np.random.standard_normal(N)
     L0_ref_dB = lin2db(free_space_path_loss(10.0, f_c))
     L1_dB = log_distance_path_loss(L0_ref_dB, Xg1_dB, n_exp, d1)
     L0_1 = db2lin(L1_dB)
@@ -36,7 +37,7 @@ def run_relay_df(params: Dict[str, Any], results_dir: Optional[str] = None) -> D
 
     # Hop 2
     h2 = rician_fading(K_dB, N)
-    Xg2_dB = lin2db(np.abs(rician_fading(K_dB, N)) ** 2)
+    Xg2_dB = sigma_shadow_dB * np.random.standard_normal(N)
     L2_dB = log_distance_path_loss(L0_ref_dB, Xg2_dB, n_exp, d2)
     L0_2 = db2lin(L2_dB)
     G2 = gain(L0_2, h2)

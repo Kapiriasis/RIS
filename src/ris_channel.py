@@ -61,6 +61,7 @@ def simulate_ris_link(params, include_direct=False):
     ris_pos = params["ris_position"]
     n_bits = params.get("ris_phase_bits", None)
     n_exp = params["path_loss_exponent"]
+    sigma_shadow_dB = params.get("shadowing_sigma_dB", 4.0)
 
     d_tx_ris, d_ris_rx = ris_link_distances(d_total, ris_pos)
 
@@ -68,8 +69,8 @@ def simulate_ris_link(params, include_direct=False):
     h_tx_ris = np.vstack([rician_fading(K_dB, N) for _ in range(M)])
     h_ris_rx = np.vstack([rician_fading(K_dB, N) for _ in range(M)])
 
-    Xg_tx_ris_dB = lin2db(np.abs(np.vstack([rician_fading(K_dB, N) for _ in range(M)])) ** 2)
-    Xg_ris_rx_dB = lin2db(np.abs(np.vstack([rician_fading(K_dB, N) for _ in range(M)])) ** 2)
+    Xg_tx_ris_dB = sigma_shadow_dB * np.random.standard_normal((M, N))
+    Xg_ris_rx_dB = sigma_shadow_dB * np.random.standard_normal((M, N))
     L0_ref_dB = lin2db(free_space_path_loss(10.0, f_c))
     L_tx_ris = db2lin(log_distance_path_loss(L0_ref_dB, Xg_tx_ris_dB, n_exp, d_tx_ris))
     L_ris_rx = db2lin(log_distance_path_loss(L0_ref_dB, Xg_ris_rx_dB, n_exp, d_ris_rx))
@@ -80,7 +81,7 @@ def simulate_ris_link(params, include_direct=False):
     # Optional direct path contribution.
     use_direct = include_direct or params.get("include_direct", False)
     if use_direct:
-        Xg_direct_dB = lin2db(np.abs(rician_fading(K_dB, N)) ** 2)
+        Xg_direct_dB = sigma_shadow_dB * np.random.standard_normal(N)
         L_direct = db2lin(log_distance_path_loss(L0_ref_dB, Xg_direct_dB, n_exp, d_total))
         h_direct = np.sqrt(1.0 / L_direct) * rician_fading(K_dB, N)
         h_eff = h_direct + h_ris
