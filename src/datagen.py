@@ -11,7 +11,7 @@ DEFAULT_PARAMS = {
     "N": 1000,                      # number of samples
     "K_dB": 15,                     # outdoor: 10 - 15, indoor: 0 - 6,
     "path_loss_exponent": 4.0,      # free space: 2, outdoor: 4, indoor: 6
-    "path_loss_exponent_los": 2.7,  # path loss exponent for LOS links (if different from NLOS)
+    "path_loss_exponent_los": 4.0,  # path loss exponent for LOS links (if different from NLOS)
     "shadowing_sigma_dB": 4.0,      # log-normal shadowing std-dev in dB
     "distance": 20,                 # meters
     "ris_element_size": 0.5,        # wavelengths
