@@ -12,6 +12,10 @@ DEFAULT_PARAMS = {
     "K_dB": 15,                 # outdoor: 10 - 15, indoor: 0 - 6,
     "path_loss_exponent": 4.0,  # free space: 2, outdoor: 4, indoor: 6
     "distance": 20,             # meters
+    "ris_element_size": 0.5,    # wavelengths
+    "ris_array_size": 400,      # number of elements
+    "ris_position": 10,         # meters
+    "ris_phase_bits": 4,        # number of bits for phase quantization
 }
 
 def generate_params(params=None, path=None):

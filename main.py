@@ -2,8 +2,9 @@ import json
 import os
 
 from scripts.direct import run_direct
+from scripts.ris import run_ris
 from scripts.relay import run_relay_df
-from src.datagen import PARAMS_PATH, generate_params
+from src.datagen import DEFAULT_PARAMS, PARAMS_PATH, generate_params
 
 def load_params() -> dict:
     # Ensure params.json exists and is non-empty, then load it.
@@ -15,7 +16,10 @@ def load_params() -> dict:
         generate_params()
 
     with open(PARAMS_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+        loaded = json.load(f)
+    merged = DEFAULT_PARAMS.copy()
+    merged.update(loaded)
+    return merged
 
 def main() -> None:
     params = load_params()
@@ -26,10 +30,15 @@ def main() -> None:
     # Run relay (decode-and-forward) baseline
     relay_metrics = run_relay_df(params)
 
+    # Run RIS-assisted link
+    ris_metrics = run_ris(params)
+
     print("=== Direct link metrics ===")
     print(direct_metrics)
     print("\n=== Relay (DF) metrics ===")
     print(relay_metrics)
+    print("\n=== RIS metrics ===")
+    print(ris_metrics)
 
 if __name__ == "__main__":
     main()

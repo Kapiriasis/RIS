@@ -11,7 +11,7 @@ thesis_code/
 ├── results/
 ├── scripts/
 │   ├── run_base.py
-|   └── run_relay.py
+│   └── run_relay.py
 ├── src/
 │   ├── channel.py
 │   ├── datagen.py

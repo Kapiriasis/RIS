@@ -35,3 +35,18 @@ def plot_capacity_hist(capacity_values, out_path, bins=40, label="link"):
     plt.tight_layout()
     plt.savefig(out_path)
     plt.close()
+
+
+def plot_snr_vs_elements(num_elements, mean_snr_db, out_path, label="RIS"):
+    num_elements = np.asarray(num_elements)
+    mean_snr_db = np.asarray(mean_snr_db)
+    ensure_dir(out_path)
+    plt.figure()
+    plt.plot(num_elements, mean_snr_db, linewidth=2, label=label)
+    plt.xlabel("Number of RIS elements")
+    plt.ylabel("Mean SNR [dB]")
+    plt.grid(True, linestyle="--", alpha=0.5)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(out_path)
+    plt.close()
