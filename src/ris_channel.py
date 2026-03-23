@@ -60,7 +60,7 @@ def simulate_ris_link(params, include_direct=False):
     M = int(params["ris_array_size"])
     ris_pos = params["ris_position"]
     n_bits = params.get("ris_phase_bits", None)
-    n_exp = params["path_loss_exponent"]
+    n_exp = params["path_loss_exponent_los"]
     sigma_shadow_dB = params.get("shadowing_sigma_dB", 4.0)
 
     d_tx_ris, d_ris_rx = ris_link_distances(d_total, ris_pos)
