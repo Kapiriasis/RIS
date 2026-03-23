@@ -10,12 +10,15 @@ thesis_code/
 │   └── params.json
 ├── results/
 ├── scripts/
-│   ├── run_base.py
-│   └── run_relay.py
+│   ├── base.py
+│   ├── relay.py
+│   └── ris.py
 ├── src/
 │   ├── channel.py
 │   ├── datagen.py
 │   ├── plot.py
+│   ├── ris_channel.py
+│   ├── ris_element.py
 │   └── utils.py
 ├── main.py
 ├── requirements.txt
@@ -30,7 +33,7 @@ pip install -r requirements.txt
 
 ## Running 
 
-
+Run main.py
 
 Plots are saved under `results/`
 
