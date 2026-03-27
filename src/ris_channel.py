@@ -71,9 +71,10 @@ def simulate_ris_link(params, include_direct=False):
 
     Xg_tx_ris_dB = sigma_shadow_dB * np.random.standard_normal((1, N))
     Xg_ris_rx_dB = sigma_shadow_dB * np.random.standard_normal((1, N))
+    d_min = d_total / 4.0
     L0_ref_dB = lin2db(free_space_path_loss(10.0, f_c))
-    L_tx_ris = db2lin(log_distance_path_loss(L0_ref_dB, Xg_tx_ris_dB, n_exp, d_tx_ris))
-    L_ris_rx = db2lin(log_distance_path_loss(L0_ref_dB, Xg_ris_rx_dB, n_exp, d_ris_rx))
+    L_tx_ris = db2lin(log_distance_path_loss(L0_ref_dB, Xg_tx_ris_dB, n_exp, max(d_tx_ris, d_min)))
+    L_ris_rx = db2lin(log_distance_path_loss(L0_ref_dB, Xg_ris_rx_dB, n_exp, max(d_ris_rx, d_min)))
 
     gamma = ris_phase_profile(h_tx_ris, h_ris_rx, n_bits=n_bits)
     h_ris = ris_cascaded_channel(h_tx_ris, h_ris_rx, gamma, L_tx_ris, L_ris_rx)
