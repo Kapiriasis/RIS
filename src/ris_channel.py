@@ -69,8 +69,8 @@ def simulate_ris_link(params, include_direct=False):
     h_tx_ris = np.vstack([rician_fading(K_dB, N) for _ in range(M)])
     h_ris_rx = np.vstack([rician_fading(K_dB, N) for _ in range(M)])
 
-    Xg_tx_ris_dB = sigma_shadow_dB * np.random.standard_normal((M, N))
-    Xg_ris_rx_dB = sigma_shadow_dB * np.random.standard_normal((M, N))
+    Xg_tx_ris_dB = sigma_shadow_dB * np.random.standard_normal((1, N))
+    Xg_ris_rx_dB = sigma_shadow_dB * np.random.standard_normal((1, N))
     L0_ref_dB = lin2db(free_space_path_loss(10.0, f_c))
     L_tx_ris = db2lin(log_distance_path_loss(L0_ref_dB, Xg_tx_ris_dB, n_exp, d_tx_ris))
     L_ris_rx = db2lin(log_distance_path_loss(L0_ref_dB, Xg_ris_rx_dB, n_exp, d_ris_rx))
