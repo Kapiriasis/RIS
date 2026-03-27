@@ -17,10 +17,10 @@ def log_distance_path_loss(L0, Xg, path_loss_exponent, distance):
     L_dB = L0 + 10 * path_loss_exponent * np.log10(distance / 10) + Xg
     return L_dB
 
-def noise_power(bandwidth):
+def noise_power(bandwidth, noise_figure_dB=0.0):
     k = 1.380649e-23    # Boltzmann constant
     temperature = 290   # 20°C
-    P_noise = k * temperature * bandwidth
+    P_noise = k * temperature * bandwidth * (10.0 ** (noise_figure_dB / 10.0))
     return P_noise
 
 def gain(L0, h):

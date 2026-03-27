@@ -90,7 +90,7 @@ def simulate_ris_link(params, include_direct=False):
         h_eff = h_ris
 
     G_eff = np.abs(h_eff) ** 2
-    P_noise = noise_power(B)
+    P_noise = noise_power(B, params.get("noise_figure_dB", 0.0))
     snr = snr_linear(P_tx, G_eff, P_noise)
     C = capacity(snr, B)
 

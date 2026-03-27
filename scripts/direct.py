@@ -30,7 +30,7 @@ def run_direct(params: Dict[str, Any], results_dir: Optional[str] = None) -> Dic
     L0 = db2lin(L_dB)
     G = gain(L0, h)
 
-    P_noise = noise_power(B)
+    P_noise = noise_power(B, params.get("noise_figure_dB", 0.0))
     snr = snr_linear(P_tx, G, P_noise)
     C = capacity(snr, B)
 

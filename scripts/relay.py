@@ -42,7 +42,7 @@ def run_relay_df(params: Dict[str, Any], results_dir: Optional[str] = None) -> D
     L0_2 = db2lin(L2_dB)
     G2 = gain(L0_2, h2)
 
-    P_noise = noise_power(B)
+    P_noise = noise_power(B, params.get("noise_figure_dB", 0.0))
     snr1 = snr_linear(P_tx, G1, P_noise)
     snr2 = snr_linear(P_tx, G2, P_noise)
 
