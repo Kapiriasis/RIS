@@ -51,3 +51,4 @@ Edit `config/params.json`
 
 ──> SNR vs Elements shows that the resolution of the array for some configurations. 
     I do not understand this!
+    
