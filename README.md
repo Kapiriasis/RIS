@@ -52,7 +52,6 @@ Edit `config/params.json`
 ## Known Problems
 
 ```
-──> SNR vs Elements shows that the resolution of the array for some configurations. 
-    I do not understand this!
+──> SNR vs Elements shows no correlation between the two variables under some configurations and I do not understand why.
 ```
  
