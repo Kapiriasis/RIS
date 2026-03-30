@@ -40,3 +40,14 @@ Plots are saved under `results/`
 ## Configuration
 
 Edit `config/params.json`
+
+## Future Additions
+
+──> Signal Model
+    └──> Combined Channel Model
+──> Bit Error Rate Metric
+
+## Known Problems
+
+──> SNR vs Elements shows that the resolution of the array for some configurations. 
+    I do not understand this!
