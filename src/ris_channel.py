@@ -42,7 +42,7 @@ def ris_cascaded_channel(h_tx_ris, h_ris_rx, gamma, L_tx_ris, L_ris_rx):
     large_scale = np.sqrt((1.0 / L1) * (1.0 / L2))
     return np.sum(large_scale * g * h1 * h2, axis=0)
 
-def simulate_ris_link(params, include_direct=False):
+def simulate_ris_link(params, include_direct=True):
     """
     Simulate a RIS-assisted link and return key physical signals and metrics.
 

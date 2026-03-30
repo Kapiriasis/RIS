@@ -6,17 +6,17 @@ PARAMS_PATH = os.path.join(ROOT, "data", "params.json")
 
 DEFAULT_PARAMS = {
     "P_tx": 0.1,                    # wifi access point: 100 mW, base station: 10 W
-    "frequency": 2.4e9,             # 2.4 GHz
+    "frequency": 28e9,              # Wifi: 2.4 GHz, 6G: 28 GHz
     "bandwidth": 20e6,              # 20 MHz
     "N": 1000,                      # number of samples
     "K_dB": 15,                     # outdoor: 10 - 15, indoor: 0 - 6,
-    "noise_figure_dB": 0.0,         # wifi access point: 5 dB, base station: 10 dB
+    "noise_figure_dB": 7.0,         # wifi access point: 5 dB, base station: 10 dB
     "path_loss_exponent": 2.5,      # free space: 2, outdoor: 4, indoor: 6
     "path_loss_exponent_los": 4.0,  # path loss exponent for LOS links (if different from NLOS)
     "shadowing_sigma_dB": 4.0,      # log-normal shadowing std-dev in dB
-    "distance": 20,                 # meters
+    "distance": 100,                # meters
     "ris_array_size": 400,          # number of elements
-    "ris_position": 10,             # meters
+    "ris_position": 50,             # meters
     "ris_phase_bits": 4,            # number of bits for phase quantization
 }
 
