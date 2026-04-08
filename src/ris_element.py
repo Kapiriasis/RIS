@@ -21,16 +21,7 @@ def quantize_phase(phase_rad, n_bits):
     return indices * step
 
 def ris_element_coefficient(phase_rad, amplitude=1.0, n_bits=None):
-    """
-    Compute the complex reflection coefficient of one RIS element.
-
-    The element response is:
-        Gamma = alpha * exp(j * phi_q)
-
-    where:
-    - alpha is the reflection amplitude in [0, 1]
-    - phi_q is the element phase (optionally quantized by n_bits)
-    """
+    # Compute the complex reflection coefficient of one RIS element.
     alpha = np.asarray(amplitude)
     if np.any(alpha < 0.0) or np.any(alpha > 1.0):
         raise ValueError("amplitude must lie in [0, 1].")
@@ -39,12 +30,7 @@ def ris_element_coefficient(phase_rad, amplitude=1.0, n_bits=None):
     return alpha * np.exp(1j * phi_q)
 
 def apply_ris_element(incident_signal, phase_rad, amplitude=1.0, n_bits=None):
-    """
-    Reflect an incident complex signal through a single RIS element.
-
-    Returns:
-        reflected_signal = incident_signal * ris_element_coefficient(...)
-    """
+    # Reflect an incident complex signal through a single RIS element.
     gamma = ris_element_coefficient(
         phase_rad=phase_rad,
         amplitude=amplitude,

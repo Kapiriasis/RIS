@@ -13,24 +13,12 @@ def ris_link_distances(total_distance, ris_position):
     return d_tx_ris, d_ris_rx
 
 def ris_phase_profile(h_tx_ris, h_ris_rx, n_bits=None):
-    """
-    Compute element-wise RIS reflection coefficients for coherent combining.
-
-    For each element m:
-        phi_m = -angle(h_tx_ris_m) - angle(h_ris_rx_m)
-    so each reflected term aligns in phase at the receiver.
-    """
+    # Compute element-wise RIS reflection coefficients for coherent combining.
     target_phase = -(np.angle(h_tx_ris) + np.angle(h_ris_rx))
     return ris_element_coefficient(phase_rad=target_phase, amplitude=1.0, n_bits=n_bits)
 
 def ris_cascaded_channel(h_tx_ris, h_ris_rx, gamma, L_tx_ris, L_ris_rx):
-    """
-    Build the equivalent RIS cascaded channel over all elements.
-
-    Equivalent channel (per sample):
-        h_ris = sqrt(beta_1 * beta_2) * sum_m(gamma_m * h1_m * h2_m)
-    where beta_i = 1 / L_i are large-scale path-loss gains.
-    """
+    # Build the equivalent RIS cascaded channel over all elements.
     h1 = np.asarray(h_tx_ris)
     h2 = np.asarray(h_ris_rx)
     g = np.asarray(gamma)
@@ -47,14 +35,7 @@ def combined_channel(h_direct, h_ris):
 
 
 def simulate_ris_link(params, include_direct=True):
-    """
-    Simulate a RIS-assisted link and return key physical signals and metrics.
-
-    Required params keys:
-        P_tx, frequency, bandwidth, N, K_dB, distance, ris_array_size, ris_position
-    Optional params keys:
-        ris_phase_bits, include_direct
-    """
+    # Simulate a RIS-assisted link and return key physical signals and metrics.
     P_tx = params["P_tx"]
     f_c = params["frequency"]
     B = params["bandwidth"]

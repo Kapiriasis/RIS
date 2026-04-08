@@ -9,9 +9,7 @@ def _default_results_dir() -> str:
     return os.path.join(root, "results")
 
 def run_ris(params: Dict[str, Any], results_dir: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Run RIS simulation and generate standard output plots.
-    """
+    # Run RIS simulation and generate standard output plots.
     if results_dir is None:
         results_dir = _default_results_dir()
 
