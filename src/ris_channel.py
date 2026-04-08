@@ -42,6 +42,10 @@ def ris_cascaded_channel(h_tx_ris, h_ris_rx, gamma, L_tx_ris, L_ris_rx):
     large_scale = np.sqrt((1.0 / L1) * (1.0 / L2))
     return np.sum(large_scale * g * h1 * h2, axis=0)
 
+def combined_channel(h_direct, h_ris):
+    return np.asarray(h_direct, dtype=complex) + np.asarray(h_ris, dtype=complex)
+
+
 def simulate_ris_link(params, include_direct=True):
     """
     Simulate a RIS-assisted link and return key physical signals and metrics.
@@ -85,10 +89,10 @@ def simulate_ris_link(params, include_direct=True):
         Xg_direct_dB = sigma_shadow_dB * np.random.standard_normal(N)
         L_direct = db2lin(log_distance_path_loss(L0_ref_dB, Xg_direct_dB, n_exp, d_total))
         h_direct = np.sqrt(1.0 / L_direct) * rician_fading(K_dB, N)
-        h_eff = h_direct + h_ris
     else:
         h_direct = np.zeros(N, dtype=complex)
-        h_eff = h_ris
+
+    h_eff = combined_channel(h_direct, h_ris)
 
     G_eff = np.abs(h_eff) ** 2
     P_noise = noise_power(B, params.get("noise_figure_dB", 0.0))
