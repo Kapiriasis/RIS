@@ -2,7 +2,7 @@ import os
 import numpy as np
 from typing import Any, Dict, Optional
 from src.channel import (free_space_path_loss, gain, log_distance_path_loss, noise_power, rician_fading)
-from src.plot import plot_capacity_hist, plot_snr_cdf
+from src.plot import plot_capacity_hist
 from src.utils import capacity, db2lin, lin2db, snr_linear
 
 def _default_results_dir() -> str:
@@ -56,13 +56,12 @@ def run_relay_df(params: Dict[str, Any], results_dir: Optional[str] = None) -> D
     outage_prob = float(np.mean(snr_df < outage_threshold))
     mean_capacity = float(np.mean(C_df))
 
-    snr_cdf_path = os.path.join(results_dir, "relay_snr_cdf.png")
     cap_hist_path = os.path.join(results_dir, "relay_capacity_hist.png")
-    plot_snr_cdf(snr_df, snr_cdf_path, label="relay DF")
     plot_capacity_hist(C_df, cap_hist_path, label="relay DF")
 
     return {
         "mean_snr_db": mean_snr_db,
         "outage_prob_5dB": outage_prob,
         "mean_capacity_bits_per_s": mean_capacity,
+        "snr_linear": snr_df,
     }

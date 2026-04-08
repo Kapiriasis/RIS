@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from typing import Any, Dict, Optional
-from src.plot import plot_capacity_hist, plot_snr_cdf, plot_snr_vs_elements
+from src.plot import plot_capacity_hist, plot_snr_vs_elements
 from src.ris_channel import simulate_ris_link
 
 def _default_results_dir() -> str:
@@ -16,12 +16,9 @@ def run_ris(params: Dict[str, Any], results_dir: Optional[str] = None) -> Dict[s
         results_dir = _default_results_dir()
 
     sim_out = simulate_ris_link(params)
-    snr = sim_out["snr_linear"]
     cap = sim_out["capacity_bits_per_s"]
 
-    snr_cdf_path = os.path.join(results_dir, "ris_snr_cdf.png")
     cap_hist_path = os.path.join(results_dir, "ris_capacity_hist.png")
-    plot_snr_cdf(snr, snr_cdf_path, label="RIS")
     plot_capacity_hist(cap, cap_hist_path, label="RIS")
 
     # Sweep RIS size from 1..M and track mean SNR.
@@ -47,4 +44,5 @@ def run_ris(params: Dict[str, Any], results_dir: Optional[str] = None) -> Dict[s
         "num_elements": element_counts.tolist(),
         "mean_snr_db": list(mean_snr_db_curve),
     }
+    metrics["snr_linear"] = sim_out["snr_linear"]
     return metrics

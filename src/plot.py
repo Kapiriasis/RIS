@@ -23,6 +23,31 @@ def plot_snr_cdf(snr_linear, out_path, label="link"):
     plt.savefig(out_path)
     plt.close()
 
+def plot_snr_cdf_comparison(snr_linear_list, labels, out_path):
+    """
+    Plot empirical SNR CDFs for multiple configurations on one axes.
+
+    Parameters
+    ----------
+    snr_linear_list : list of 1-D arrays, one per configuration (linear scale)
+    labels          : list of strings matching snr_linear_list
+    out_path        : file path to save the figure
+    """
+    ensure_dir(out_path)
+    plt.figure()
+    for snr_lin, label in zip(snr_linear_list, labels):
+        snr_db = 10.0 * np.log10(np.asarray(snr_lin))
+        snr_db_sorted = np.sort(snr_db)
+        p = np.linspace(0.0, 1.0, snr_db_sorted.size, endpoint=False)
+        plt.plot(snr_db_sorted, p, label=label)
+    plt.xlabel("SNR [dB]")
+    plt.ylabel("Empirical CDF")
+    plt.grid(True, which="both", linestyle="--", alpha=0.5)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(out_path)
+    plt.close()
+
 def plot_capacity_hist(capacity_values, out_path, bins=40, label="link"):
     capacity_values = np.asarray(capacity_values)
     ensure_dir(out_path)
@@ -36,6 +61,29 @@ def plot_capacity_hist(capacity_values, out_path, bins=40, label="link"):
     plt.savefig(out_path)
     plt.close()
 
+def plot_ber_vs_snr(snr_db, ber_curves, labels, out_path):
+    """
+    Plot BER vs. average SNR for one or more curves on a semilogy axis.
+
+    Parameters
+    ----------
+    snr_db     : 1-D array of SNR values in dB (shared x-axis)
+    ber_curves : list of 1-D arrays, one per curve
+    labels     : list of strings matching ber_curves
+    out_path   : file path to save the figure
+    """
+    snr_db = np.asarray(snr_db)
+    ensure_dir(out_path)
+    plt.figure()
+    for ber, label in zip(ber_curves, labels):
+        plt.semilogy(snr_db, np.asarray(ber), label=label)
+    plt.xlabel("Average SNR [dB]")
+    plt.ylabel("BER")
+    plt.grid(True, which="both", linestyle="--", alpha=0.5)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(out_path)
+    plt.close()
 
 def plot_snr_vs_elements(num_elements, mean_snr_db, out_path, label="RIS"):
     num_elements = np.asarray(num_elements)
