@@ -31,7 +31,7 @@ def run_ris(params: Dict[str, Any], results_dir: Optional[str] = None) -> Dict[s
     for m in element_counts:
         sweep_params = dict(params)
         sweep_params["ris_array_size"] = int(m)
-        sweep_out = simulate_ris_link(sweep_params)
+        sweep_out = simulate_ris_link(sweep_params, include_direct=False)
         mean_snr_db_curve.append(sweep_out["metrics"]["mean_snr_db"])
 
     snr_vs_elements_path = os.path.join(results_dir, "ris_snr_vs_elements.png")
