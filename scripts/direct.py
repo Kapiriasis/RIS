@@ -1,18 +1,9 @@
-import os
 import numpy as np
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from src.channel import (free_space_path_loss, gain, log_distance_path_loss, noise_power, rician_fading)
-from src.plot import plot_capacity_hist
 from src.utils import capacity, db2lin, lin2db, snr_linear
 
-def _default_results_dir() -> str:
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(root, "results")
-
-def run_direct(params: Dict[str, Any], results_dir: Optional[str] = None) -> Dict[str, Any]:
-
-    if results_dir is None:
-        results_dir = _default_results_dir()
+def run_direct(params: Dict[str, Any]) -> Dict[str, Any]:
 
     P_tx = params["P_tx"]
     f_c = params["frequency"]
@@ -40,12 +31,10 @@ def run_direct(params: Dict[str, Any], results_dir: Optional[str] = None) -> Dic
     outage_prob = float(np.mean(snr < outage_threshold))
     mean_capacity = float(np.mean(C))
 
-    cap_hist_path = os.path.join(results_dir, "direct_capacity_hist.png")
-    plot_capacity_hist(C, cap_hist_path, label="direct")
-
     return {
         "mean_snr_db": mean_snr_db,
         "outage_prob_5dB": outage_prob,
         "mean_capacity_bits_per_s": mean_capacity,
         "snr_linear": snr,
+        "capacity": C,
     }

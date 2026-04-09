@@ -61,6 +61,29 @@ def plot_capacity_hist(capacity_values, out_path, bins=40, label="link"):
     plt.savefig(out_path)
     plt.close()
 
+def plot_capacity_hist_comparison(capacity_list, labels, out_path, bins=40):
+    """
+    Plot capacity histograms for multiple configurations on one axes.
+
+    Parameters
+    ----------
+    capacity_list : list of 1-D arrays, one per configuration
+    labels        : list of strings matching capacity_list
+    out_path      : file path to save the figure
+    bins          : number of histogram bins
+    """
+    ensure_dir(out_path)
+    plt.figure()
+    for cap, label in zip(capacity_list, labels):
+        plt.hist(np.asarray(cap), bins=bins, density=True, alpha=0.5, label=label)
+    plt.xlabel("Capacity [bits/s]")
+    plt.ylabel("Density")
+    plt.grid(True, linestyle="--", alpha=0.5)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(out_path)
+    plt.close()
+
 def plot_ber_vs_snr(snr_db, ber_curves, labels, out_path):
     """
     Plot BER vs. average SNR for one or more curves on a semilogy axis.

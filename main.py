@@ -5,7 +5,7 @@ from scripts.ris import run_ris
 from scripts.relay import run_relay_df
 from scripts.ber import run_ber
 from src.datagen import DEFAULT_PARAMS, PARAMS_PATH, generate_params
-from src.plot import plot_snr_cdf_comparison
+from src.plot import plot_capacity_hist_comparison, plot_snr_cdf_comparison
 
 def load_params() -> dict:
     # Ensure params.json exists and is non-empty, then load it.
@@ -42,8 +42,20 @@ def main() -> None:
         "mean_capacity_bits_per_s": ris_metrics["mean_capacity_bits_per_s"],
     }
 
-    # Combined SNR CDF comparison across all three configurations
     results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+
+    # Combined capacity histogram across all three configurations
+    plot_capacity_hist_comparison(
+        capacity_list=[
+            direct_metrics["capacity"],
+            relay_metrics["capacity"],
+            ris_metrics["capacity"],
+        ],
+        labels=["Direct", "Relay (DF)", "RIS"],
+        out_path=os.path.join(results_dir, "capacity_hist_comparison.png"),
+    )
+
+    # Combined SNR CDF comparison across all three configurations
     plot_snr_cdf_comparison(
         snr_linear_list=[
             direct_metrics["snr_linear"],
