@@ -77,8 +77,9 @@ def plot_ber_vs_snr(snr_db, ber_curves, labels, out_path):
     plt.figure()
     for ber, label in zip(ber_curves, labels):
         plt.semilogy(snr_db, np.asarray(ber), label=label)
-    plt.xlabel("Average SNR [dB]")
+    plt.xlabel("$E_b/N_0$ [dB]")
     plt.ylabel("BER")
+    plt.ylim([1e-4, 1])
     plt.grid(True, which="both", linestyle="--", alpha=0.5)
     plt.legend()
     plt.tight_layout()
