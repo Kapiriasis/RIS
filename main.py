@@ -1,5 +1,6 @@
 import json
 import os
+import numpy as np
 from scripts.direct import run_direct
 from scripts.ris import run_ris
 from scripts.relay import run_relay_df
@@ -66,10 +67,13 @@ def main() -> None:
         out_path=os.path.join(results_dir, "snr_cdf_comparison.png"),
     )
 
+    def scalar_metrics(m):
+        return {k: v for k, v in m.items() if np.isscalar(v)}
+
     print("=== Direct link metrics ===")
-    print(direct_metrics)
+    print(scalar_metrics(direct_metrics))
     print("\n=== Relay (DF) metrics ===")
-    print(relay_metrics)
+    print(scalar_metrics(relay_metrics))
     print("\n=== RIS metrics ===")
     print(ris_summary)
 
