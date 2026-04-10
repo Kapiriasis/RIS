@@ -10,7 +10,8 @@ thesis_code/
 │   └── params.json
 ├── results/
 ├── scripts/
-│   ├── base.py
+│   ├── ber.py
+│   ├── direct.py
 │   ├── relay.py
 │   └── ris.py
 ├── src/
@@ -19,6 +20,7 @@ thesis_code/
 │   ├── plot.py
 │   ├── ris_channel.py
 │   ├── ris_element.py
+│   ├── signal.py
 │   └── utils.py
 ├── main.py
 ├── requirements.txt
