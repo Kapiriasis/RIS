@@ -16,9 +16,11 @@ def run_ris(params: Dict[str, Any], results_dir: Optional[str] = None) -> Dict[s
     sim_out = simulate_ris_link(params)
     cap = sim_out["capacity_bits_per_s"]
 
-    # Sweep RIS size from 1..M and track mean SNR.
+    # Sweep RIS size from 1..M and track mean SNR (log-spaced, ~30 points).
     max_elements = int(params["ris_array_size"])
-    element_counts = np.arange(1, max_elements + 1, dtype=int)
+    element_counts = np.unique(
+        np.geomspace(1, max_elements, num=30).astype(int)
+    )
     mean_snr_db_curve = []
     for m in element_counts:
         sweep_params = dict(params)
