@@ -1,152 +1,208 @@
+"""
+Handover model for a 2-D RIS-assisted mmWave network.
+
+Signal model follows Wei & Zhang (2025) equations (1)-(4):
+  - LoS direct path  : S = P * K_L * d^{-alpha_L}
+  - NLoS direct path : S = P * K_N * d^{-alpha_N}
+  - IRS-aided path   : S_ris = P * K_L^2 * G_bf * r^{-alpha_L} * d'^{-alpha_L}
+    added on top of direct (LoS or NLoS) for the serving BS only.
+
+LoS determination: a straight line between two points is blocked if it
+intersects the square obstacle (axis-aligned, given by centre and half-side).
+"""
 import numpy as np
-from src.utils import db2lin
-
 
 # ---------------------------------------------------------------------------
-# RSRP models  (Wei & Zhang 2025, Eqs. 1–4)
+# Geometry helpers
 # ---------------------------------------------------------------------------
 
-def rsrp_without_ris(P_tx, K_L, distance, alpha_L):
-    """S = P_tx * K_L * d^(-alpha_L)"""
-    return P_tx * K_L * (distance ** -alpha_L)
-
-
-def rsrp_with_ris(P_tx, K_L, d_bs, alpha_L, G_bf, r_g, d_ris_ue, alpha_ris=None):
+def los_blocked(p1: np.ndarray, p2: np.ndarray,
+                sq_cx: float, sq_cy: float, sq_half: float) -> bool:
     """
-    S = P_tx*K_L*d^(-alpha_L) + P_tx*K_L^2 * G_bf * r_g^(-alpha_L) * d_ris_ue^(-alpha_L)
+    Return True if the segment p1→p2 intersects the axis-aligned square
+    [sq_cx-sq_half, sq_cx+sq_half] x [sq_cy-sq_half, sq_cy+sq_half].
 
-    Parameters
-    ----------
-    d_bs       : distance from serving BS to UE
-    r_g        : distance from serving BS to RIS
-    d_ris_ue   : distance from RIS to UE
-    alpha_ris  : path-loss exponent for RIS hops (defaults to alpha_L)
+    Uses the Liang-Barsky / slab method.
     """
-    if alpha_ris is None:
-        alpha_ris = alpha_L
-    direct = rsrp_without_ris(P_tx, K_L, d_bs, alpha_L)
-    reflected = P_tx * (K_L ** 2) * G_bf * (r_g ** -alpha_ris) * (d_ris_ue ** -alpha_ris)
-    return direct + reflected
+    x0, y0 = float(p1[0]), float(p1[1])
+    x1, y1 = float(p2[0]), float(p2[1])
 
+    xmin = sq_cx - sq_half
+    xmax = sq_cx + sq_half
+    ymin = sq_cy - sq_half
+    ymax = sq_cy + sq_half
 
-def ris_beamforming_gain(F_g, M_g):
-    """G_bf = F_g * M_g^2"""
-    return F_g * (M_g ** 2)
+    dx = x1 - x0
+    dy = y1 - y0
 
+    t0, t1 = 0.0, 1.0
+
+    for p, q in [(-dx, x0 - xmin), (dx, xmax - x0),
+                 (-dy, y0 - ymin), (dy, ymax - y0)]:
+        if p == 0.0:
+            if q < 0.0:
+                return False   # parallel and outside
+        else:
+            t = q / p
+            if p < 0.0:
+                t0 = max(t0, t)
+            else:
+                t1 = min(t1, t)
+        if t0 > t1:
+            return False
+
+    return True
 
 # ---------------------------------------------------------------------------
-# Large-scale path-loss constant K_L from 3GPP / free-space reference
+# RSRP computation (Wei & Zhang Eqs 1-4)
 # ---------------------------------------------------------------------------
 
-def path_loss_constant(frequency, d_ref=1.0):
+def rsrp(
+    P_tx: float,
+    ue_pos: np.ndarray,
+    bs_pos: np.ndarray,
+    K_L: float,
+    K_N: float,
+    alpha_L: float,
+    alpha_N: float,
+    sq_cx: float,
+    sq_cy: float,
+    sq_half: float,
+    # IRS parameters — None means no IRS for this BS
+    ris_pos: np.ndarray = None,
+    G_bf: float = 0.0,
+    chi_lin: float = 0.0,
+) -> float:
     """
-    K_L = (c / (4*pi*f*d_ref))^2  scaled so that PL(d_ref)=1 when alpha_L=2.
-    This is the intercept used in  PL(d) = K_L * d^{-alpha_L}.
-    """
-    c = 3e8
-    wavelength = c / frequency
-    return (wavelength / (4.0 * np.pi * d_ref)) ** 2
+    Compute instantaneous (large-scale) RSRP at the UE from one BS.
 
+    Direct path is LoS or NLoS depending on obstacle intersection.
+    If ris_pos is given, the IRS-aided component is added when its
+    additional gain exceeds chi_lin (linear ratio).
+    """
+    d = float(np.linalg.norm(ue_pos - bs_pos))
+    d = max(d, 1.0)
+
+    blocked = los_blocked(ue_pos, bs_pos, sq_cx, sq_cy, sq_half)
+
+    if blocked:
+        S_direct = P_tx * K_N * (d ** (-alpha_N))
+    else:
+        S_direct = P_tx * K_L * (d ** (-alpha_L))
+
+    S_ris = 0.0
+    if ris_pos is not None:
+        r = float(np.linalg.norm(ris_pos - bs_pos))
+        d_prime = float(np.linalg.norm(ue_pos - ris_pos))
+        r = max(r, 1.0)
+        d_prime = max(d_prime, 1.0)
+
+        # IRS path requires LoS from BS→RIS and RIS→UE
+        bs_ris_blocked = los_blocked(bs_pos, ris_pos, sq_cx, sq_cy, sq_half)
+        ris_ue_blocked = los_blocked(ris_pos, ue_pos, sq_cx, sq_cy, sq_half)
+
+        if not bs_ris_blocked and not ris_ue_blocked:
+            S_ris_candidate = (
+                P_tx * (K_L ** 2) * G_bf
+                * (r ** (-alpha_L))
+                * (d_prime ** (-alpha_L))
+            )
+            if S_ris_candidate > chi_lin * S_direct:
+                S_ris = S_ris_candidate
+
+    return S_direct + S_ris
 
 # ---------------------------------------------------------------------------
-# A3-event handover state machine
+# Handover finite-state machine
 # ---------------------------------------------------------------------------
 
 class HandoverFSM:
     """
-    Implements 3GPP A3 event: handover triggers when
-        RSRP_neighbour - RSRP_serving > gamma_HO
-    sustained for TTT seconds.
+    3GPP A3-event handover with TTT, HOF (Q_out), and ping-pong detection.
 
-    HOF  : serving RSRP / neighbour RSRP < Q_out during TTT window.
-    PP   : handover back to original BS within sojourn time T_p.
+    States
+    ------
+    'connected_a' / 'connected_b' : UE served by BS-A or BS-B
+    'in_ttt'                       : A3 condition met, counting down TTT
+    'in_hof'                       : HOF condition detected, counting down recovery
     """
 
     def __init__(
         self,
-        gamma_HO_dB: float = 3.0,
-        TTT: float = 0.04,          # 40 ms
-        Q_out_dB: float = -8.0,
-        T_p: float = 1.0,           # ping-pong sojourn window [s]
-        dt: float = 0.01,
+        ttt: float = 0.04,          # time-to-trigger [s]
+        hyst_db: float = 3.0,       # A3 hysteresis [dB]
+        q_out_db: float = -8.0,     # HOF threshold: S_serving / S_neighbor [dB]
+        tp: float = 1.0,            # ping-pong time [s]
+        hof_recovery: float = 0.5,  # time to recover from HOF [s]
     ):
-        self.gamma_HO = db2lin(gamma_HO_dB)   # linear ratio
-        self.Q_out = db2lin(Q_out_dB)
-        self.TTT = TTT
-        self.T_p = T_p
-        self.dt = dt
+        self.ttt = ttt
+        self.hyst = 10.0 ** (hyst_db / 10.0)   # linear
+        self.q_out = 10.0 ** (q_out_db / 10.0)  # linear
+        self.tp = tp
+        self.hof_recovery = hof_recovery
 
-        # Runtime state
-        self.serving_bs: int = 0          # index of current serving BS (0 = BS_A)
-        self.ttt_elapsed: float = 0.0     # time TTT condition has been active
-        self.ttt_active: bool = False
-        self.last_ho_time: float = -np.inf
-        self.last_ho_from: int = -1
+        self.serving = "a"          # 'a' or 'b'
+        self.state = "connected_a"
+        self._ttt_elapsed = 0.0
+        self._last_ho_time = -np.inf
+        self._hof_elapsed = 0.0
 
-        # Counters
-        self.handover_count: int = 0
-        self.hof_count: int = 0
-        self.pp_count: int = 0
+        self.handover_count = 0
+        self.hof_count = 0
+        self.pp_count = 0
 
-    # ------------------------------------------------------------------
-    def step(self, t: float, rsrp_a: float, rsrp_b: float):
+    def step(self, dt: float, S_a: float, S_b: float, t: float):
         """
-        Update FSM for one time step.
+        Advance FSM by dt seconds given current RSRP values S_a, S_b.
 
         Parameters
         ----------
-        t       : current simulation time [s]
-        rsrp_a  : RSRP from BS_A
-        rsrp_b  : RSRP from BS_B
+        dt  : time step [s]
+        S_a : RSRP from BS-A [linear power]
+        S_b : RSRP from BS-B [linear power]
+        t   : current simulation time [s]
         """
-        rsrp = [rsrp_a, rsrp_b]
-        neighbour = 1 - self.serving_bs
-        S_s = rsrp[self.serving_bs]
-        S_n = rsrp[neighbour]
+        if self.state.startswith("connected") or self.state == "in_ttt":
+            self._step_normal(dt, S_a, S_b, t)
+        elif self.state == "in_hof":
+            self._step_hof(dt, S_a, S_b)
 
-        a3_condition = (S_n / S_s) > self.gamma_HO if S_s > 0 else False
-        hof_condition = (S_s / S_n) < self.Q_out if S_n > 0 else False
+    def _step_normal(self, dt, S_a, S_b, t):
+        serving_rsrp = S_a if self.serving == "a" else S_b
+        neigh_rsrp   = S_b if self.serving == "a" else S_a
 
-        if a3_condition:
-            if not self.ttt_active:
-                self.ttt_active = True
-                self.ttt_elapsed = 0.0
-            self.ttt_elapsed += self.dt
-
-            # HOF check during TTT window
-            if hof_condition:
+        # HOF check: serving signal collapsed
+        if serving_rsrp > 0 and neigh_rsrp > 0:
+            if serving_rsrp / neigh_rsrp < self.q_out:
                 self.hof_count += 1
-                self._execute_handover(t, neighbour)
+                self.state = "in_hof"
+                self._hof_elapsed = 0.0
+                self._ttt_elapsed = 0.0
                 return
 
-            if self.ttt_elapsed >= self.TTT:
-                self._execute_handover(t, neighbour)
+        # A3 trigger: neighbour > serving * hysteresis
+        a3_met = (neigh_rsrp > self.hyst * serving_rsrp)
+
+        if a3_met:
+            self._ttt_elapsed += dt
+            self.state = "in_ttt"
+            if self._ttt_elapsed >= self.ttt:
+                # Execute handover
+                self.handover_count += 1
+                if t - self._last_ho_time < self.tp:
+                    self.pp_count += 1
+                self._last_ho_time = t
+                self.serving = "b" if self.serving == "a" else "a"
+                self.state = "connected_b" if self.serving == "b" else "connected_a"
+                self._ttt_elapsed = 0.0
         else:
-            self.ttt_active = False
-            self.ttt_elapsed = 0.0
+            self._ttt_elapsed = 0.0
+            self.state = "connected_a" if self.serving == "a" else "connected_b"
 
-    # ------------------------------------------------------------------
-    def _execute_handover(self, t: float, target: int):
-        self.ttt_active = False
-        self.ttt_elapsed = 0.0
-
-        # Ping-pong: handover back to where we came from within T_p
-        if (
-            self.last_ho_from == target
-            and (t - self.last_ho_time) <= self.T_p
-        ):
-            self.pp_count += 1
-
-        self.last_ho_from = self.serving_bs
-        self.last_ho_time = t
-        self.serving_bs = target
-        self.handover_count += 1
-
-    # ------------------------------------------------------------------
-    @property
-    def summary(self):
-        return {
-            "handover_count": self.handover_count,
-            "hof_count": self.hof_count,
-            "pp_count": self.pp_count,
-        }
+    def _step_hof(self, dt, S_a, S_b):
+        self._hof_elapsed += dt
+        if self._hof_elapsed >= self.hof_recovery:
+            # Re-attach to stronger BS
+            self.serving = "a" if S_a >= S_b else "b"
+            self.state = "connected_a" if self.serving == "a" else "connected_b"
+            self._hof_elapsed = 0.0

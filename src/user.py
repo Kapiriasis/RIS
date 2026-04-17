@@ -1,34 +1,55 @@
 import numpy as np
 
-
 class User:
-    """Vehicle/UE moving at constant speed between two base stations."""
+    """
+    2-D random waypoint user moving inside a rectangular area [0,W] x [0,H].
+    Picks a random destination, travels at constant speed, picks next destination
+    on arrival.  Boundary reflections are handled automatically because destinations
+    are always inside the area.
+    """
+    def __init__(
+        self,
+        area_width: float,
+        area_height: float,
+        speed: float,
+        rng: np.random.Generator = None,
+    ):
+        self.W = float(area_width)
+        self.H = float(area_height)
+        self.speed = float(speed)
+        self._rng = rng if rng is not None else np.random.default_rng()
 
-    def __init__(self, total_distance: float, speed: float = None, rng=None):
-        rng = rng or np.random.default_rng()
-        self.total_distance = float(total_distance)
-        # Random start position uniformly in [0, total_distance]
-        self.position = float(rng.uniform(0.0, total_distance))
-        # Random speed in [5, 30] m/s (~18–108 km/h) if not provided
-        self.speed = float(speed) if speed is not None else float(rng.uniform(5.0, 30.0))
-        # Direction: +1 (toward BS_B) or -1 (toward BS_A)
-        self.direction = float(rng.choice([-1.0, 1.0]))
+        # Start at a random position
+        self.x = float(self._rng.uniform(0.0, self.W))
+        self.y = float(self._rng.uniform(0.0, self.H))
 
-    def step(self, dt: float) -> float:
-        """Advance by dt seconds; bounce at boundaries. Returns new position."""
-        self.position += self.direction * self.speed * dt
-        if self.position >= self.total_distance:
-            self.position = self.total_distance
-            self.direction = -1.0
-        elif self.position <= 0.0:
-            self.position = 0.0
-            self.direction = 1.0
-        return self.position
+        # Pick first waypoint
+        self._dest_x, self._dest_y = self._new_waypoint()
+
+    def _new_waypoint(self):
+        return (
+            float(self._rng.uniform(0.0, self.W)),
+            float(self._rng.uniform(0.0, self.H)),
+        )
 
     @property
-    def distance_to_bs_a(self) -> float:
-        return self.position
+    def position(self):
+        return np.array([self.x, self.y])
 
-    @property
-    def distance_to_bs_b(self) -> float:
-        return self.total_distance - self.position
+    def step(self, dt: float) -> np.ndarray:
+        dx = self._dest_x - self.x
+        dy = self._dest_y - self.y
+        dist = np.hypot(dx, dy)
+
+        travel = self.speed * dt
+
+        if travel >= dist:
+            # Arrived at waypoint — consume remaining time toward next one
+            self.x, self.y = self._dest_x, self._dest_y
+            self._dest_x, self._dest_y = self._new_waypoint()
+        else:
+            ratio = travel / dist
+            self.x += ratio * dx
+            self.y += ratio * dy
+
+        return self.position.copy()
