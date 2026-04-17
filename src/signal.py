@@ -112,34 +112,27 @@ def theoretical_bpsk_ber(snr_linear):
 
 def ber_vs_snr(h_eff, snr_db_range, P_noise):
     """
-    Compute empirical BPSK BER across a range of average SNR values.
+    Semi-analytical BPSK BER across a range of average SNR values.
 
-    For each target average SNR the transmit power is set so that:
+    P_tx is set at each point so that E[|h_eff|²]·P_tx/P_noise = SNR_target,
+    then the per-realization conditional BER is averaged:
 
-        E[ |h_eff|^2 ] · P_tx / P_noise = SNR_target
+        BER ≈ mean_n( 0.5·erfc( sqrt( |h_eff[n]|² · P_tx / P_noise ) ) )
 
-    This isolates the effect of the channel (fading, RIS gain) from the
-    transmit power and places both direct-link and RIS-assisted curves on the
-    same average-SNR axis for a fair comparison.
-
-    Parameters
-    ----------
-    h_eff        : (N,) complex effective channel realizations
-    snr_db_range : 1-D array-like of target average SNR values in dB
-    P_noise      : noise power [W]
-
-    Returns
-    -------
-    ber_empirical : (len(snr_db_range),) array of empirical BER values
+    Averaging the closed-form expression over channel realizations gives smooth
+    curves regardless of how low the BER is, avoiding the statistical noise of
+    counting discrete bit errors at high SNR.
     """
     h_eff = np.asarray(h_eff, dtype=complex)
-    mean_channel_gain = float(np.mean(np.abs(h_eff) ** 2))
+    gain_per_sample = np.abs(h_eff) ** 2
+    mean_channel_gain = float(np.mean(gain_per_sample))
 
     snr_db_range = np.asarray(snr_db_range, dtype=float)
-    ber_empirical = np.empty(len(snr_db_range))
+    ber_out = np.empty(len(snr_db_range))
     for i, snr_db in enumerate(snr_db_range):
         snr_lin = 10.0 ** (snr_db / 10.0)
         P_tx = snr_lin * P_noise / mean_channel_gain
-        ber_empirical[i] = bpsk_ber(h_eff, P_tx, P_noise)
+        snr_per_sample = gain_per_sample * P_tx / P_noise
+        ber_out[i] = float(np.mean(0.5 * erfc(np.sqrt(snr_per_sample))))
 
-    return ber_empirical
+    return ber_out

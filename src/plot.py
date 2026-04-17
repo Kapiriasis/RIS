@@ -77,7 +77,7 @@ def plot_capacity_hist_comparison(capacity_list, labels, out_path, bins=40):
     for cap, label in zip(capacity_list, labels):
         plt.hist(np.asarray(cap), bins=bins, density=True, alpha=0.5, label=label)
     plt.xlabel("Capacity [bits/s]")
-    plt.ylabel("Density")
+    plt.ylabel("Probability Density [s/bits]")
     plt.grid(True, linestyle="--", alpha=0.5)
     plt.legend()
     plt.tight_layout()

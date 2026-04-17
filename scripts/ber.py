@@ -64,7 +64,7 @@ def run_ber(
     if results_dir is None:
         results_dir = _default_results_dir()
     if snr_db_range is None:
-        snr_db_range = np.arange(-5, 26, dtype=float)
+        snr_db_range = np.linspace(-5, 25, 200)
 
     B = params["bandwidth"]
     P_noise = noise_power(B, params.get("noise_figure_dB", 0.0))
