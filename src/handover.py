@@ -107,7 +107,9 @@ def rsrp(
                 * (r ** (-alpha_L))
                 * (d_prime ** (-alpha_L))
             )
-            if S_ris_candidate > chi_lin * S_direct:
+            # Schedule IRS if it improves total RSRP by at least chi_lin factor:
+            # (S_direct + S_ris) / S_direct > chi_lin  →  S_ris > (chi_lin-1)*S_direct
+            if S_ris_candidate > max(0.0, chi_lin - 1.0) * S_direct:
                 S_ris = S_ris_candidate
 
     return S_direct + S_ris

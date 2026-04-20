@@ -44,24 +44,27 @@ DEFAULT_NET_PARAMS: Dict[str, Any] = {
     # BS positions  [x, y]
     "bs_a_pos": [0.0, 250.0],
     "bs_b_pos": [500.0, 250.0],
-    # RIS position [x, y]  — left of centre, clear LoS to both BSs
-    "ris_pos": [200.0, 150.0],
+    # RIS position [x, y]
+    # (400,50): LoS to BS-A and to users in the NLoS shadow east of the obstacle
+    "ris_pos": [400.0, 50.0],
     # Square obstacle: centre [x,y] and half-side
     "obstacle_cx": 250.0,
     "obstacle_cy": 250.0,
     "obstacle_half": 60.0,
-    # Path-loss parameters (Wei & Zhang large-scale model)
-    "K_L": 10 ** (-10.38),
-    "K_N": 10 ** (-14.54),
-    "alpha_L": 2.09,
-    "alpha_N": 3.75,
+    # Path-loss parameters — Wei & Zhang 3.5 GHz experiment
+    # K_L = K_N = 10^{-4.33}, alpha_L=1.73, alpha_N=3.19
+    # At these values K_L^2 * G_bf / K_N ≈ 3.2, so RIS path is physically meaningful
+    "K_L": 10 ** (-4.33),
+    "K_N": 10 ** (-4.33),
+    "alpha_L": 1.73,
+    "alpha_N": 3.19,
     # IRS beamforming
     "F_g": 0.76,
-    "M_g": 200,
+    "M_g": 300,
     # Transmit power [W]
     "P_tx": db2lin(10.0) / 1000.0,  # 10 dBm
     # Handover thresholds
-    "chi_dB": 6.0,       # IRS gain threshold over direct
+    "chi_dB": 0.0,       # IRS scheduled whenever it provides any RSRP improvement
     "q_out_dB": -8.0,    # HOF threshold
     "hyst_dB": 3.0,      # A3 hysteresis
     "ttt": 0.04,         # time-to-trigger [s]
@@ -109,7 +112,8 @@ def _simulate_one(
         tp=params["tp"],
     )
 
-    user = User(W, H, params["speed"], rng=rng)
+    obstacle = (cx, cy, half)
+    user = User(W, H, params["speed"], rng=rng, obstacle=obstacle)
     dt   = params["dt"]
     T    = params["T_sim"]
     t    = 0.0
