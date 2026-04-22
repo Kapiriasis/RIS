@@ -34,7 +34,7 @@ DEFAULT_NET_PARAMS: Dict[str, Any] = {
     "area_width":  1000.0,
     "area_height": 1000.0,
     # one wall + one RIS per unique nearest-neighbour BS pair
-    "n_nodes":      100,
+    "n_nodes":      50,
     # BS placement
     "bs_min_sep":   300.0,
     # Wall geometry
