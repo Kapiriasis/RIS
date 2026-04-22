@@ -38,7 +38,7 @@ def plot_snr_cdf_comparison(snr_linear_list, labels, out_path):
     for snr_lin, label in zip(snr_linear_list, labels):
         snr_db = 10.0 * np.log10(np.asarray(snr_lin))
         snr_db_sorted = np.sort(snr_db)
-        p = np.linspace(0.0, 1.0, snr_db_sorted.size, endpoint=False)
+        p = (np.arange(snr_db_sorted.size) + 1) / snr_db_sorted.size
         plt.plot(snr_db_sorted, p, label=label)
     plt.xlabel("SNR [dB]")
     plt.ylabel("Empirical CDF")

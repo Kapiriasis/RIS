@@ -11,17 +11,12 @@ The serving BS selects the best RIS from a list (one per wall).
 
 HOF uses an absolute serving-link SNR threshold (radio link failure).
 """
-
 import numpy as np
 from typing import List, Tuple
 
 Wall = Tuple[np.ndarray, np.ndarray]   # (endpoint_1, endpoint_2)
 
-
-# ---------------------------------------------------------------------------
 # Geometry: strict line-segment intersection
-# ---------------------------------------------------------------------------
-
 def los_blocked(
     p1: np.ndarray,
     p2: np.ndarray,
@@ -43,15 +38,10 @@ def los_blocked(
     u = float(diff[0] * d[1]  - diff[1] * d[0]) / cross
     return 0.0 < t < 1.0 and 0.0 < u < 1.0
 
-
 def _any_blocked(p1: np.ndarray, p2: np.ndarray, walls: List[Wall]) -> bool:
     return any(los_blocked(p1, p2, w[0], w[1]) for w in walls)
 
-
-# ---------------------------------------------------------------------------
 # RSRP for one BS (optionally with one RIS candidate)
-# ---------------------------------------------------------------------------
-
 def rsrp(
     P_tx: float,
     ue_pos: np.ndarray,
@@ -103,7 +93,7 @@ def best_rsrp(
     G_bf: float,
     chi_lin: float,
 ) -> float:
-    """RSRP for one BS, using the best RIS from ris_list (or direct if none helps)."""
+    # RSRP for one BS, using the best RIS from ris_list (or direct if none helps)
     S = rsrp(P_tx, ue_pos, bs_pos, K_L, K_N, alpha_L, alpha_N, walls)
     for ris_pos in ris_list:
         S_try = rsrp(P_tx, ue_pos, bs_pos, K_L, K_N, alpha_L, alpha_N,
@@ -112,11 +102,7 @@ def best_rsrp(
             S = S_try
     return S
 
-
-# ---------------------------------------------------------------------------
 # Multi-BS handover FSM
-# ---------------------------------------------------------------------------
-
 class HandoverFSM:
     """
     3GPP A3-event handover for N base stations, with TTT, absolute-SNR HOF,

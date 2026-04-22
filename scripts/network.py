@@ -17,21 +17,15 @@ Path-loss: Wei & Zhang (2025) 3.5 GHz experiment
 
 HOF: serving SNR < q_out_snr_db = -20 dB  (absolute threshold).
 """
-
 import os
 import time
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import Dict, Any, List, Optional
-
 from src.user import User
-from src.handover import rsrp, best_rsrp, HandoverFSM, Wall
+from src.handover import HandoverFSM, Wall
 from src.utils import db2lin
 from src.channel import noise_power as compute_noise_power
-
-# ---------------------------------------------------------------------------
-# Default parameters
-# ---------------------------------------------------------------------------
 
 DEFAULT_NET_PARAMS: Dict[str, Any] = {
     # Area [m]
@@ -42,7 +36,7 @@ DEFAULT_NET_PARAMS: Dict[str, Any] = {
     # BS placement
     "bs_min_sep":   300.0,
     # Wall geometry
-    "wall_half_len":  150.0,   # half-length of each wall [m]
+    "wall_half_len":   60.0,   # half-length of each wall [m]
     "ris_offset":      25.0,   # RIS sits this far past the wall tip [m]
     # Shared topology seed (BSs + walls placed once, fixed across all runs)
     "topo_seed": 42,
@@ -73,10 +67,7 @@ DEFAULT_NET_PARAMS: Dict[str, Any] = {
     "N_runs": 500,
 }
 
-# ---------------------------------------------------------------------------
 # Topology builders
-# ---------------------------------------------------------------------------
-
 def _place_bs(
     n: int,
     width: float,
@@ -84,7 +75,7 @@ def _place_bs(
     min_sep: float,
     rng: np.random.Generator,
 ) -> np.ndarray:
-    """Uniform-random BS placement with minimum inter-site separation."""
+    # Uniform-random BS placement with minimum inter-site separation
     positions: List[np.ndarray] = []
     for _ in range(200_000):
         if len(positions) == n:
@@ -97,7 +88,6 @@ def _place_bs(
             f"Could not place {n} BSs with min separation {min_sep} m."
         )
     return np.array(positions)
-
 
 def _place_walls(
     n: int,
@@ -124,7 +114,6 @@ def _place_walls(
         walls.append((p1, p2))
     return walls
 
-
 def _place_ris(walls: List[Wall], offset: float) -> List[np.ndarray]:
     """
     One RIS per wall, placed just past the p1 endpoint in the direction
@@ -139,10 +128,53 @@ def _place_ris(walls: List[Wall], offset: float) -> List[np.ndarray]:
         ris_list.append(ris)
     return ris_list
 
-# ---------------------------------------------------------------------------
-# Single-trajectory simulation
-# ---------------------------------------------------------------------------
+# Vectorised signal helpers
+def _blocked_mask(src: np.ndarray, targets: np.ndarray,
+                  walls: List[Wall]) -> np.ndarray:
+    # True where the segment src -> targets[i] is strictly blocked by a wall
+    d       = targets - src                                  # (n, 2)
+    blocked = np.zeros(len(targets), dtype=bool)
+    for w_p1, w_p2 in walls:
+        e     = w_p2 - w_p1                                 # (2,)
+        diff  = w_p1 - src                                  # (2,)
+        cross = d[:, 0] * e[1] - d[:, 1] * e[0]            # (n,)
+        t_num = float(diff[0] * e[1] - diff[1] * e[0])     # scalar
+        u_num = diff[0] * d[:, 1] - diff[1] * d[:, 0]      # (n,)
+        valid = np.abs(cross) > 1e-10
+        with np.errstate(divide="ignore", invalid="ignore"):
+            t = np.where(valid, t_num / cross, 0.0)
+            u = np.where(valid, u_num / cross, 0.0)
+        blocked |= valid & (t > 0.0) & (t < 1.0) & (u > 0.0) & (u < 1.0)
+    return blocked
 
+def _rsrp_vec(P_tx: float, ue_pos: np.ndarray, bs_positions: np.ndarray,
+              K_L: float, K_N: float, alpha_L: float, alpha_N: float,
+              walls: List[Wall]) -> np.ndarray:
+    # Direct RSRP for all BSs in one vectorised call. Returns shape (n_bs,)
+    d       = np.maximum(np.linalg.norm(bs_positions - ue_pos, axis=1), 1.0)
+    blocked = _blocked_mask(ue_pos, bs_positions, walls)
+    return np.where(blocked,
+                    P_tx * K_N * d ** (-alpha_N),
+                    P_tx * K_L * d ** (-alpha_L))
+
+def _ris_boost(P_tx: float, ue_pos: np.ndarray, bs_pos: np.ndarray,
+               S_direct: float, K_L: float, alpha_L: float,
+               walls: List[Wall], ris_arr: np.ndarray,
+               G_bf: float, chi_lin: float) -> float:
+    # Return best (direct + RIS) RSRP for one BS. ris_arr shape (n_ris, 2)
+    r   = np.maximum(np.linalg.norm(ris_arr - bs_pos,  axis=1), 1.0)
+    dp  = np.maximum(np.linalg.norm(ris_arr - ue_pos,  axis=1), 1.0)
+    clear = (~_blocked_mask(bs_pos, ris_arr, walls) &
+             ~_blocked_mask(ue_pos, ris_arr, walls))
+    S_cand = np.where(clear,
+                      P_tx * (K_L ** 2) * G_bf * r ** (-alpha_L) * dp ** (-alpha_L),
+                      0.0)
+    best = float(np.max(S_cand))
+    if best > max(0.0, chi_lin - 1.0) * S_direct:
+        return S_direct + best
+    return S_direct
+
+# Single-trajectory simulation
 def _simulate_one(
     params: Dict[str, Any],
     bs_positions: np.ndarray,
@@ -152,16 +184,17 @@ def _simulate_one(
     rng: np.random.Generator,
     P_noise: float,
 ) -> Dict[str, int]:
-    W  = params["area_width"];  H = params["area_height"]
+    W    = params["area_width"];  H = params["area_height"]
     K_L  = params["K_L"];  K_N  = params["K_N"]
     aL   = params["alpha_L"]; aN = params["alpha_N"]
     P_tx = params["P_tx"]
     G_bf    = params["F_g"] * (params["M_g"] ** 2)
     chi_lin = db2lin(params["chi_dB"])
-    n_bs    = len(bs_positions)
+
+    ris_arr = np.array(ris_list)   # (n_ris, 2) — pre-stacked once
 
     fsm = HandoverFSM(
-        n_bs         = n_bs,
+        n_bs         = len(bs_positions),
         noise_power  = P_noise,
         ttt          = params["ttt"],
         hyst_db      = params["hyst_dB"],
@@ -170,32 +203,24 @@ def _simulate_one(
     )
 
     user = User(W, H, params["speed"], rng=rng)
-
-    init_pos = user.position
-    init_rsrp = np.array([
-        rsrp(P_tx, init_pos, bs_positions[i], K_L, K_N, aL, aN, walls)
-        for i in range(n_bs)
-    ])
-    fsm.initialise_serving(init_rsrp)
+    fsm.initialise_serving(
+        _rsrp_vec(P_tx, user.position, bs_positions, K_L, K_N, aL, aN, walls)
+    )
 
     dt = params["dt"]
     T  = params["T_sim"]
     t  = 0.0
 
     while t < T:
-        pos = user.step(dt)
+        pos      = user.step(dt)
+        rsrp_arr = _rsrp_vec(P_tx, pos, bs_positions, K_L, K_N, aL, aN, walls)
 
-        rsrp_arr = np.empty(n_bs)
-        for i in range(n_bs):
-            if use_ris and i == fsm.serving:
-                rsrp_arr[i] = best_rsrp(
-                    P_tx, pos, bs_positions[i], K_L, K_N, aL, aN,
-                    walls, ris_list, G_bf, chi_lin,
-                )
-            else:
-                rsrp_arr[i] = rsrp(
-                    P_tx, pos, bs_positions[i], K_L, K_N, aL, aN, walls,
-                )
+        if use_ris:
+            s = fsm.serving
+            rsrp_arr[s] = _ris_boost(
+                P_tx, pos, bs_positions[s], rsrp_arr[s],
+                K_L, aL, walls, ris_arr, G_bf, chi_lin,
+            )
 
         fsm.step(dt, rsrp_arr, t)
         t += dt
@@ -206,10 +231,7 @@ def _simulate_one(
         "pps":       fsm.pp_count,
     }
 
-# ---------------------------------------------------------------------------
 # Monte-Carlo runner
-# ---------------------------------------------------------------------------
-
 def run_network(
     params: Optional[Dict[str, Any]] = None,
     results_dir: Optional[str] = None,
@@ -225,7 +247,7 @@ def run_network(
     params["area_width"]    = 1000.0 * scale
     params["area_height"]   = 1000.0 * scale
     params["bs_min_sep"]    = 300.0  * scale
-    params["wall_half_len"] = 150.0  * scale
+    params["wall_half_len"] = 60.0   * scale
 
     if results_dir is None:
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -285,10 +307,7 @@ def run_network(
     _plot_results(results, params, results_dir)
     return results
 
-# ---------------------------------------------------------------------------
 # Output helpers
-# ---------------------------------------------------------------------------
-
 def _print_summary(results: Dict, N: int, n_nodes: int):
     print(f"\nMonte Carlo results (N={N} runs, {n_nodes} BSs / walls / RIS)")
     print(f"{'Metric':<20} {'No RIS':>22} {'With RIS':>22}")

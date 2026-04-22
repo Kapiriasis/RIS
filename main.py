@@ -5,6 +5,7 @@ from scripts.direct import run_direct
 from scripts.ris import run_ris
 from scripts.relay import run_relay_df
 from scripts.ber import run_ber
+from scripts.network import run_network
 from src.datagen import DEFAULT_PARAMS, PARAMS_PATH, generate_params
 from src.plot import plot_capacity_hist_comparison, plot_snr_cdf_comparison
 
@@ -76,6 +77,10 @@ def main() -> None:
     print(scalar_metrics(relay_metrics))
     print("\n=== RIS metrics ===")
     print(ris_summary)
+
+    # Run handover simulation (RIS-assisted multi-BS network)
+    print()
+    run_network()
 
 if __name__ == "__main__":
     main()

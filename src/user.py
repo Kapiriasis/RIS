@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class User:
     """
     2-D random waypoint user inside a rectangular area [0,W] x [0,H].
