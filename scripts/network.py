@@ -62,7 +62,7 @@ DEFAULT_NET_PARAMS: Dict[str, Any] = {
     "ttt":           0.04,
     "tp":            1.0,
     # Mobility
-    "speed": 10.0,
+    "speed": 30.0,
     # Simulation
     "dt":     0.05,
     "T_sim":  60.0,
@@ -406,14 +406,14 @@ def _plot_topology(
 
     # RIS
     ris_arr = np.array(ris_list)
-    ax.scatter(ris_arr[:, 0], ris_arr[:, 1], marker="^", s=100,
+    ax.scatter(ris_arr[:, 0], ris_arr[:, 1], marker="^", s=40,
                color="limegreen", zorder=4, label="RIS")
 
     # BSs — single legend entry for all
     colors = ["royalblue", "firebrick", "darkorange", "purple",
               "teal", "deeppink", "olive", "navy"]
     for i, pos in enumerate(bs_positions):
-        ax.scatter(*pos, marker="s", s=160, color=colors[i % len(colors)],
+        ax.scatter(*pos, marker="s", s=60, color=colors[i % len(colors)],
                    zorder=5, label="BS" if i == 0 else None)
 
     ax.set_xlim(0, W); ax.set_ylim(0, H)
