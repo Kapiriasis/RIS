@@ -134,6 +134,7 @@ class HandoverFSM:
         self.state         = "connected"
         self._prev_serving = None
         self._ttt_elapsed  = 0.0
+        self._ttt_target   = None
         self._last_ho_time = -np.inf
         self._hof_elapsed  = 0.0
 
@@ -167,6 +168,9 @@ class HandoverFSM:
                 best_idx = j
 
         if best_idx != self.serving and best_val > self.hyst * serving_rsrp:
+            if best_idx != self._ttt_target:
+                self._ttt_elapsed = 0.0
+                self._ttt_target  = best_idx
             self._ttt_elapsed += dt
             self.state = "in_ttt"
             if self._ttt_elapsed >= self.ttt:
@@ -179,8 +183,10 @@ class HandoverFSM:
                 self.serving       = best_idx
                 self.state         = "connected"
                 self._ttt_elapsed  = 0.0
+                self._ttt_target   = None
         else:
             self._ttt_elapsed = 0.0
+            self._ttt_target  = None
             self.state = "connected"
 
     def _step_hof(self, dt, rsrp_arr):

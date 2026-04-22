@@ -45,53 +45,6 @@ def received_signal(s, h_eff, P_tx, P_noise):
     )
     return h_eff * np.sqrt(float(P_tx)) * s + noise
 
-def detect_bpsk(y, h_eff):
-    """
-    Coherent MRC detection for BPSK.
-
-    The sufficient statistic for BPSK over a complex channel is:
-
-        z[n] = Re( conj(h_eff[n]) · y[n] )
-
-    Decision: s_hat[n] = sign( z[n] )
-
-    Parameters
-    ----------
-    y     : (N,) complex received signal
-    h_eff : (N,) complex effective channel (must be the same realizations used
-            when transmitting)
-
-    Returns
-    -------
-    s_hat : (N,) detected symbols ∈ {+1, -1}
-    """
-    z = np.real(np.conj(np.asarray(h_eff, dtype=complex)) * np.asarray(y, dtype=complex))
-    return np.sign(z)
-
-def bpsk_ber(h_eff, P_tx, P_noise):
-    """
-    Empirical BPSK BER for a given set of channel realizations.
-
-    One symbol is transmitted per channel realization; the channel is treated
-    as perfectly known at the receiver (coherent detection).
-
-    Parameters
-    ----------
-    h_eff   : (N,) complex effective channel realizations
-    P_tx    : transmit power [W]
-    P_noise : noise power [W]
-
-    Returns
-    -------
-    ber : scalar BER estimate in [0, 1]
-    """
-    h_eff = np.asarray(h_eff, dtype=complex)
-    N = len(h_eff)
-    s = bpsk_symbols(N)
-    y = received_signal(s, h_eff, P_tx, P_noise)
-    s_hat = detect_bpsk(y, h_eff)
-    return float(np.mean(s_hat != s))
-
 def theoretical_bpsk_ber(snr_linear):
     """
     Theoretical BPSK BER over an AWGN channel:

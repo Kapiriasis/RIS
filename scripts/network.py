@@ -1,13 +1,12 @@
 """
 2-D RIS-assisted handover simulation.
 
-Topology — equal counts of BSs, walls, and RIS (controlled by n_nodes):
-  Area   : 1000 x 1000 m
+Topology (controlled by n_nodes):
+  Area   : scales so each BS covers ~250 000 m²
   BSs    : n_nodes stations, uniform-random placement
-  Walls  : n_nodes line-segment obstacles, random centre and orientation,
-           fixed half-length; each wall represents a building facade
-  RIS    : n_nodes elements, one per wall — placed just past the wall's
-           near endpoint so it has clear LoS to both sides of the obstacle
+  Walls  : one per unique nearest-neighbour BS pair, placed 20-40% of the way
+           from BS_i toward its neighbour, random orientation
+  RIS    : two per wall, one past each endpoint — best endpoint selected per step
 
 The serving BS selects the best RIS from the full list.
 
@@ -15,13 +14,16 @@ Path-loss: Wei & Zhang (2025) 3.5 GHz experiment
   K_L = K_N = 10^{-4.33}, alpha_L = 1.73, alpha_N = 3.19
   G_bf = F_g * M_g^2  (M_g = 500 for 1000 m cells)
 
-HOF: serving SNR < q_out_snr_db = -20 dB  (absolute threshold).
+HOF: serving SNR < q_out_snr_db = -10 dB  (absolute threshold).
 """
 import os
 import time
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")   # non-interactive backend; must precede pyplot import
 import matplotlib.pyplot as plt
-from typing import Dict, Any, List, Optional
+from concurrent.futures import ProcessPoolExecutor
+from typing import Dict, Any, List, Optional, Tuple
 from src.user import User
 from src.handover import HandoverFSM, Wall
 from src.utils import db2lin
@@ -31,13 +33,13 @@ DEFAULT_NET_PARAMS: Dict[str, Any] = {
     # Area [m]
     "area_width":  1000.0,
     "area_height": 1000.0,
-    # Equal counts: BSs = walls = RIS
-    "n_nodes":      10,
+    # one wall + one RIS per unique nearest-neighbour BS pair
+    "n_nodes":      100,
     # BS placement
     "bs_min_sep":   300.0,
     # Wall geometry
-    "wall_half_len":   60.0,   # half-length of each wall [m]
-    "ris_offset":      25.0,   # RIS sits this far past the wall tip [m]
+    "wall_half_len":    150.0,   # half-length of each wall [m]
+    "ris_offset":        25.0,   # RIS placed this far past the wall tip [m]
     # Shared topology seed (BSs + walls placed once, fixed across all runs)
     "topo_seed": 42,
     # Path-loss (Wei & Zhang 3.5 GHz)
@@ -55,14 +57,14 @@ DEFAULT_NET_PARAMS: Dict[str, Any] = {
     "noise_figure_dB": 7.0,
     # Handover thresholds
     "chi_dB":       0.0,
-    "q_out_snr_db": -20.0,
+    "q_out_snr_db": -10.0,
     "hyst_dB":       3.0,
     "ttt":           0.04,
     "tp":            1.0,
     # Mobility
     "speed": 10.0,
     # Simulation
-    "dt":     0.01,
+    "dt":     0.05,
     "T_sim":  60.0,
     "N_runs": 500,
 }
@@ -94,38 +96,63 @@ def _place_walls(
     width: float,
     height: float,
     half_len: float,
+    bs_positions: np.ndarray,
     rng: np.random.Generator,
 ) -> List[Wall]:
     """
-    n walls with random centre position and random orientation.
-    Centres are kept at least half_len + 10 m from each area boundary so
-    walls do not protrude outside.
+    Place up to n walls, one per unique nearest-neighbour BS pair.
+    Each wall centre sits 20–40% of the way from BS_i toward its neighbour
+    (inside the serving cell, enabling HOFs), with a random orientation so
+    the RIS endpoint geometry is favourable for the cascaded signal path.
     """
-    margin = half_len + 10.0
+    n_bs = len(bs_positions)
+
+    dists = np.linalg.norm(
+        bs_positions[:, None, :] - bs_positions[None, :, :], axis=2
+    )
+    np.fill_diagonal(dists, np.inf)
+    nn = np.argmin(dists, axis=1)   # shape (n_bs,)
+
+    placed_pairs: set = set()
     walls: List[Wall] = []
-    for _ in range(n):
-        cx = rng.uniform(margin, width  - margin)
-        cy = rng.uniform(margin, height - margin)
-        theta = rng.uniform(0.0, np.pi)          # orientation in [0, π)
-        dx = half_len * np.cos(theta)
-        dy = half_len * np.sin(theta)
-        p1 = np.array([cx - dx, cy - dy])
-        p2 = np.array([cx + dx, cy + dy])
+
+    for i in rng.permutation(n_bs):
+        if len(walls) >= n:
+            break
+        j    = int(nn[i])
+        pair = frozenset((int(i), j))
+        if pair in placed_pairs:
+            continue
+        placed_pairs.add(pair)
+
+        bs_a, bs_b = bs_positions[i], bs_positions[j]
+        t      = rng.uniform(0.2, 0.4)
+        center = bs_a + t * (bs_b - bs_a)
+
+        theta = rng.uniform(0.0, np.pi)
+        dx    = half_len * np.cos(theta)
+        dy    = half_len * np.sin(theta)
+
+        p1 = np.clip(center + np.array([ dx,  dy]), [0.0, 0.0], [width, height])
+        p2 = np.clip(center + np.array([-dx, -dy]), [0.0, 0.0], [width, height])
         walls.append((p1, p2))
     return walls
 
+
 def _place_ris(walls: List[Wall], offset: float) -> List[np.ndarray]:
     """
-    One RIS per wall, placed just past the p1 endpoint in the direction
-    away from p2.  This gives it clear LoS to both sides of the wall
-    (the strict-intersection check excludes t = 0, so starting exactly at
-    the endpoint does not count as blocked).
+    Two RIS per wall — one just past each endpoint.
+    Both endpoints are geometrically valid relay points (the strict
+    intersection check excludes t = 0 and t = 1, so a RIS sitting exactly
+    at a tip sees both sides of the wall).  Placing at both endpoints means
+    _ris_boost automatically selects whichever has the shorter cascaded path
+    for the UE's current position, regardless of which side it entered from.
     """
     ris_list: List[np.ndarray] = []
     for p1, p2 in walls:
         wall_dir = (p2 - p1) / np.linalg.norm(p2 - p1)
-        ris = p1 - offset * wall_dir          # step past the p1 end
-        ris_list.append(ris)
+        ris_list.append(p1 - offset * wall_dir)   # past p1 end
+        ris_list.append(p2 + offset * wall_dir)   # past p2 end
     return ris_list
 
 # Vectorised signal helpers
@@ -228,10 +255,21 @@ def _simulate_one(
     return {
         "handovers": fsm.handover_count,
         "hofs":      fsm.hof_count,
-        "pps":       fsm.pp_count,
     }
 
-# Monte-Carlo runner
+# Parallel worker
+def _run_pair(
+    args: Tuple,
+) -> Tuple[Dict[str, int], Dict[str, int]]:
+    """Run one no-RIS / with-RIS pair from the same seed. Called in workers."""
+    params, bs_positions, walls, ris_list, seed, P_noise = args
+    r_no = _simulate_one(params, bs_positions, walls, ris_list, False,
+                         np.random.default_rng(seed), P_noise)
+    r_ri = _simulate_one(params, bs_positions, walls, ris_list, True,
+                         np.random.default_rng(seed), P_noise)
+    return r_no, r_ri
+
+# Monte-Carlo run
 def run_network(
     params: Optional[Dict[str, Any]] = None,
     results_dir: Optional[str] = None,
@@ -246,7 +284,7 @@ def run_network(
     scale = np.sqrt(n / 4.0)
     params["area_width"]    = 1000.0 * scale
     params["area_height"]   = 1000.0 * scale
-    params["bs_min_sep"]    = 300.0  * scale
+    params["bs_min_sep"]    = 300.0          # fixed — cell radius is always ~500 m
     params["wall_half_len"] = 60.0   * scale
 
     if results_dir is None:
@@ -256,48 +294,47 @@ def run_network(
 
     # Fixed topology (same across all N_runs)
     topo_rng = np.random.default_rng(int(params["topo_seed"]))
-    n = int(params["n_nodes"])
+    n     = int(params["n_nodes"])
+    n_obs = n   # one wall per unique nearest-neighbour BS pair (natural limit)
     bs_positions = _place_bs(n, params["area_width"], params["area_height"],
                              params["bs_min_sep"], topo_rng)
-    walls   = _place_walls(n, params["area_width"], params["area_height"],
-                           params["wall_half_len"], topo_rng)
+    walls    = _place_walls(n_obs, params["area_width"], params["area_height"],
+                            params["wall_half_len"], bs_positions, topo_rng)
     ris_list = _place_ris(walls, params["ris_offset"])
     P_noise = compute_noise_power(params["bandwidth"], params["noise_figure_dB"])
 
-    print(f"Topology: {n} BSs, {n} walls, {n} RIS")
+    print(f"Topology: {n} BSs, {n_obs} walls, {n_obs} RIS")
     for i, p in enumerate(bs_positions):
         print(f"  BS-{i}: ({p[0]:.0f}, {p[1]:.0f})")
 
-    N   = int(params["N_runs"])
-    rng = np.random.default_rng(0)
+    N    = int(params["N_runs"])
+    rng  = np.random.default_rng(0)
+    seeds = [int(rng.integers(0, 2 ** 31)) for _ in range(N)]
+    args_list = [
+        (params, bs_positions, walls, ris_list, s, P_noise) for s in seeds
+    ]
 
-    ho_no, hof_no, pp_no = [], [], []
-    ho_ri, hof_ri, pp_ri = [], [], []
+    ho_no, hof_no = [], []
+    ho_ri, hof_ri = [], []
 
+    n_workers = os.cpu_count() or 1
+    print(f"Running {N} pairs across {n_workers} workers …")
     t0 = time.time()
-    for i in range(N):
-        seed = rng.integers(0, 2 ** 31)
-        r_no = _simulate_one(params, bs_positions, walls, ris_list, False,
-                             np.random.default_rng(seed), P_noise)
-        r_ri = _simulate_one(params, bs_positions, walls, ris_list, True,
-                             np.random.default_rng(seed), P_noise)
-
-        ho_no.append(r_no["handovers"]); hof_no.append(r_no["hofs"]); pp_no.append(r_no["pps"])
-        ho_ri.append(r_ri["handovers"]); hof_ri.append(r_ri["hofs"]); pp_ri.append(r_ri["pps"])
-
-        if (i + 1) % max(1, N // 10) == 0:
-            print(f"  Run {i+1}/{N}  ({time.time()-t0:.1f}s)")
+    with ProcessPoolExecutor(max_workers=n_workers) as pool:
+        for done, (r_no, r_ri) in enumerate(pool.map(_run_pair, args_list), 1):
+            ho_no.append(r_no["handovers"]); hof_no.append(r_no["hofs"])
+            ho_ri.append(r_ri["handovers"]); hof_ri.append(r_ri["hofs"])
+            if done % max(1, N // 10) == 0:
+                print(f"  {done}/{N}  ({time.time()-t0:.1f}s)")
 
     results = {
         "no_ris": {
             "handovers": np.array(ho_no),
             "hofs":      np.array(hof_no),
-            "pps":       np.array(pp_no),
         },
         "ris": {
             "handovers": np.array(ho_ri),
             "hofs":      np.array(hof_ri),
-            "pps":       np.array(pp_ri),
         },
         "bs_positions": bs_positions,
         "walls":        walls,
@@ -309,22 +346,21 @@ def run_network(
 
 # Output helpers
 def _print_summary(results: Dict, N: int, n_nodes: int):
-    print(f"\nMonte Carlo results (N={N} runs, {n_nodes} BSs / walls / RIS)")
+    n_obs = len(results["walls"])
+    print(f"\nMonte Carlo results (N={N} runs, {n_nodes} BSs, {n_obs} walls / RIS)")
     print(f"{'Metric':<20} {'No RIS':>22} {'With RIS':>22}")
     print("-" * 66)
-    for key, label in [("handovers","Handovers"), ("hofs","HOFs"), ("pps","Ping-pongs")]:
+    for key, label in [("handovers","Handovers"), ("hofs","HOFs")]:
         a = results["no_ris"][key]; b = results["ris"][key]
         print(f"{label:<20} {np.mean(a):>8.2f} +/- {np.std(a):<9.2f}"
               f" {np.mean(b):>8.2f} +/- {np.std(b):.2f}")
     print()
 
-
 def _plot_results(results: Dict, params: Dict, results_dir: str):
     metrics = [("handovers", "Handovers per run"),
-               ("hofs",      "HOFs per run"),
-               ("pps",       "Ping-pongs per run")]
+               ("hofs",      "HOFs per run")]
 
-    fig, axes = plt.subplots(1, 3, figsize=(14, 4))
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
     for ax, (key, title) in zip(axes, metrics):
         a = results["no_ris"][key]; b = results["ris"][key]
         max_val = max(a.max(), b.max(), 1)
@@ -336,10 +372,11 @@ def _plot_results(results: Dict, params: Dict, results_dir: str):
         ax.set_ylabel("Frequency")
         ax.legend()
 
-    n = params["n_nodes"]
+    n_bs  = len(results["bs_positions"])
+    n_obs = len(results["walls"])
     fig.suptitle(
         f"RIS-assisted handover  |  {params['area_width']:.0f}x{params['area_height']:.0f} m  "
-        f"|  {n} BSs, {n} walls, {n} RIS  |  N={params['N_runs']}",
+        f"|  {n_bs} BSs, {n_obs} walls, {n_obs} RIS  |  N={params['N_runs']}",
         fontsize=9,
     )
     fig.tight_layout()
@@ -350,7 +387,6 @@ def _plot_results(results: Dict, params: Dict, results_dir: str):
 
     _plot_topology(params, results["bs_positions"],
                   results["walls"], results["ris_list"], results_dir)
-
 
 def _plot_topology(
     params: Dict,
@@ -373,18 +409,20 @@ def _plot_topology(
     ax.scatter(ris_arr[:, 0], ris_arr[:, 1], marker="^", s=100,
                color="limegreen", zorder=4, label="RIS")
 
-    # BSs
+    # BSs — single legend entry for all
     colors = ["royalblue", "firebrick", "darkorange", "purple",
               "teal", "deeppink", "olive", "navy"]
     for i, pos in enumerate(bs_positions):
         ax.scatter(*pos, marker="s", s=160, color=colors[i % len(colors)],
-                   zorder=5, label=f"BS-{i}")
+                   zorder=5, label="BS" if i == 0 else None)
 
     ax.set_xlim(0, W); ax.set_ylim(0, H)
     ax.set_aspect("equal")
     ax.set_xlabel("x [m]"); ax.set_ylabel("y [m]")
-    n = params["n_nodes"]
-    ax.set_title(f"Network topology  ({n} BSs, {n} walls, {n} RIS)")
+    ax.set_title(
+        f"Network topology  ({len(bs_positions)} BSs, "
+        f"{len(walls)} walls, {len(ris_list)} RIS)"
+    )
     ax.legend(loc="upper right", fontsize=8)
     fig.tight_layout()
     out = os.path.join(results_dir, "network_topology.png")
