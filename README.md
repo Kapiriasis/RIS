@@ -11,16 +11,19 @@ thesis_code/
 ├── results/
 ├── scripts/
 │   ├── ber.py
+│   ├── network.py
 │   ├── direct.py
 │   ├── relay.py
 │   └── ris.py
 ├── src/
 │   ├── channel.py
 │   ├── datagen.py
+│   ├── handover.py
 │   ├── plot.py
 │   ├── ris_channel.py
 │   ├── ris_element.py
 │   ├── signal.py
+│   ├── user.py
 │   └── utils.py
 ├── main.py
 ├── requirements.txt
@@ -42,18 +45,4 @@ Plots are saved under `results/`
 ## Configuration
 
 Edit `config/params.json`
-
-## Future Additions
-
-```
-──> Signal Model
-    └──> Combined Channel Model
-──> Bit Error Rate Metric
-```
-
-## Known Problems
-
-```
-──> SNR vs Elements shows no correlation between the two variables under some configurations and I do not understand why.
-```
  
