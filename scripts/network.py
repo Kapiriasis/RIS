@@ -66,7 +66,7 @@ DEFAULT_NET_PARAMS: Dict[str, Any] = {
     "speed": 30.0,
     # Simulation
     "dt":     0.05,
-    "T_sim":  60.0,
+    "T_sim":  600.0,
     "N_runs": 500,
 }
 
