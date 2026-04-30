@@ -40,6 +40,7 @@ DEFAULT_NET_PARAMS: Dict[str, Any] = {
     # Wall geometry
     "wall_half_len":    150.0,   # half-length of each wall [m]
     "ris_offset":        25.0,   # RIS placed this far past the wall tip [m]
+    "ris_per_wall":       2,     # 1 = p1 endpoint only, 2 = both endpoints
     # Shared topology seed (BSs + walls placed once, fixed across all runs)
     "topo_seed": 42,
     # Path-loss (Wei & Zhang 3.5 GHz)
@@ -139,20 +140,18 @@ def _place_walls(
     return walls
 
 
-def _place_ris(walls: List[Wall], offset: float) -> List[np.ndarray]:
+def _place_ris(walls: List[Wall], offset: float, per_wall: int = 2) -> List[np.ndarray]:
     """
-    Two RIS per wall — one just past each endpoint.
-    Both endpoints are geometrically valid relay points (the strict
-    intersection check excludes t = 0 and t = 1, so a RIS sitting exactly
-    at a tip sees both sides of the wall).  Placing at both endpoints means
-    _ris_boost automatically selects whichever has the shorter cascaded path
-    for the UE's current position, regardless of which side it entered from.
+    Place RIS at wall endpoints.  per_wall=1 uses only the p1 endpoint;
+    per_wall=2 uses both endpoints so _ris_boost can pick whichever gives
+    the shorter cascaded path for the UE's current position.
     """
     ris_list: List[np.ndarray] = []
     for p1, p2 in walls:
         wall_dir = (p2 - p1) / np.linalg.norm(p2 - p1)
-        ris_list.append(p1 - offset * wall_dir)   # past p1 end
-        ris_list.append(p2 + offset * wall_dir)   # past p2 end
+        ris_list.append(p1 - offset * wall_dir)
+        if per_wall == 2:
+            ris_list.append(p2 + offset * wall_dir)
     return ris_list
 
 # Vectorised signal helpers
@@ -300,7 +299,7 @@ def run_network(
                              params["bs_min_sep"], topo_rng)
     walls    = _place_walls(n_obs, params["area_width"], params["area_height"],
                             params["wall_half_len"], bs_positions, topo_rng)
-    ris_list = _place_ris(walls, params["ris_offset"])
+    ris_list = _place_ris(walls, params["ris_offset"], int(params["ris_per_wall"]))
     P_noise = compute_noise_power(params["bandwidth"], params["noise_figure_dB"])
 
     print(f"Topology: {n} BSs, {n_obs} walls, {n_obs} RIS")
