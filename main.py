@@ -4,7 +4,6 @@ import numpy as np
 from scripts.direct import run_direct
 from scripts.ris import run_ris
 from scripts.relay import run_relay_df
-from scripts.ber import run_ber
 from scripts.network import run_network
 from src.datagen import DEFAULT_PARAMS, PARAMS_PATH, generate_params
 from src.plot import plot_capacity_hist_comparison, plot_snr_cdf_comparison
@@ -32,9 +31,6 @@ def main() -> None:
 
     # Run relay (decode-and-forward) baseline
     relay_metrics = run_relay_df(params)
-
-    # Run BER vs. SNR comparison (direct, RIS-only, RIS+direct, theoretical)
-    run_ber(params)
 
     # Run RIS-assisted link
     ris_metrics = run_ris(params)
@@ -65,7 +61,7 @@ def main() -> None:
             ris_metrics["snr_linear"],
         ],
         labels=["Direct", "Relay (DF)", "RIS"],
-        out_path=os.path.join(results_dir, "snr_cdf_comparison.png"),
+        out_path=os.path.join(results_dir, "outage_probability.png"),
     )
 
     def scalar_metrics(m):

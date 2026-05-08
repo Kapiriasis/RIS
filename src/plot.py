@@ -40,8 +40,8 @@ def plot_snr_cdf_comparison(snr_linear_list, labels, out_path):
         snr_db_sorted = np.sort(snr_db)
         p = (np.arange(snr_db_sorted.size) + 1) / snr_db_sorted.size
         plt.plot(snr_db_sorted, p, label=label)
-    plt.xlabel("SNR [dB]")
-    plt.ylabel("Empirical CDF")
+    plt.xlabel("SNR Threshold [dB]")
+    plt.ylabel("Outage Probability P(SNR < threshold)")
     plt.grid(True, which="both", linestyle="--", alpha=0.5)
     plt.legend()
     plt.tight_layout()
