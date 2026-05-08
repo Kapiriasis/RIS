@@ -38,7 +38,7 @@ DEFAULT_NET_PARAMS: Dict[str, Any] = {
     # BS placement
     "bs_min_sep":   300.0,
     # Wall geometry
-    "wall_half_len":    150.0,   # half-length of each wall [m]
+    "wall_half_len":    50.0,   # half-length of each wall [m]
     "ris_offset":        25.0,   # RIS placed this far past the wall tip [m]
     "ris_per_wall":       2,     # 1 = p1 endpoint only, 2 = both endpoints
     # Shared topology seed (BSs + walls placed once, fixed across all runs)
@@ -102,7 +102,7 @@ def _place_walls(
 ) -> List[Wall]:
     """
     Place up to n walls, one per unique nearest-neighbour BS pair.
-    Each wall centre sits 20–40% of the way from BS_i toward its neighbour
+    Each wall centre sits 20-40% of the way from BS_i toward its neighbour
     (inside the serving cell, enabling HOFs), with a random orientation so
     the RIS endpoint geometry is favourable for the cascaded signal path.
     """
