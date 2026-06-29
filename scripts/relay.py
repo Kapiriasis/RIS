@@ -37,9 +37,10 @@ def run_relay_df(params: Dict[str, Any]) -> Dict[str, Any]:
     snr1 = snr_linear(P_tx, G1, P_noise)
     snr2 = snr_linear(P_tx, G2, P_noise)
 
-    # Decode-and-forward: limited by the weaker hop
+    # Decode-and-forward: limited by the weaker hop. Half-duplex relaying
+    # needs two time slots (receive, then forward), so the rate carries a 1/2 prelog factor.
     snr_df = np.minimum(snr1, snr2)
-    C_df = capacity(snr_df, B)
+    C_df = 0.5 * capacity(snr_df, B)
 
     mean_snr_db = float(lin2db(np.mean(snr_df)))
     outage_threshold_db = 5.0
