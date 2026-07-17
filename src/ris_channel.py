@@ -81,7 +81,7 @@ def simulate_ris_link(params, include_direct=True):
 
     outage_threshold = 10.0 ** (5.0 / 10.0)  # 5 dB in linear scale
     metrics = {
-        "mean_snr_db": float(lin2db(np.mean(snr))),
+        "mean_snr_db": float(np.mean(lin2db(snr))),
         "outage_prob_5dB": float(np.mean(snr < outage_threshold)),
         "mean_capacity_bits_per_s": float(np.mean(C)),
     }

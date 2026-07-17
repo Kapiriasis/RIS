@@ -25,7 +25,7 @@ def run_direct(params: Dict[str, Any]) -> Dict[str, Any]:
     snr = snr_linear(P_tx, G, P_noise)
     C = capacity(snr, B)
 
-    mean_snr_db = float(lin2db(np.mean(snr)))
+    mean_snr_db = float(np.mean(lin2db(snr)))
     outage_threshold_db = 5.0
     outage_threshold = 10.0 ** (outage_threshold_db / 10.0)
     outage_prob = float(np.mean(snr < outage_threshold))

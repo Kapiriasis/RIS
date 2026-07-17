@@ -42,7 +42,7 @@ def run_relay_df(params: Dict[str, Any]) -> Dict[str, Any]:
     snr_df = np.minimum(snr1, snr2)
     C_df = 0.5 * capacity(snr_df, B)
 
-    mean_snr_db = float(lin2db(np.mean(snr_df)))
+    mean_snr_db = float(np.mean(lin2db(snr_df)))
     outage_threshold_db = 5.0
     outage_threshold = 10.0 ** (outage_threshold_db / 10.0)
     outage_prob = float(np.mean(snr_df < outage_threshold))
