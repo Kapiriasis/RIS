@@ -76,7 +76,7 @@ def main() -> None:
 
     # Run handover simulation (RIS-assisted multi-BS network)
     print()
-    run_network()
+    # run_network()
 
 if __name__ == "__main__":
     main()
