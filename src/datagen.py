@@ -12,8 +12,8 @@ DEFAULT_PARAMS = {
     "K_dB": 15,                     # outdoor: 10 - 15, indoor: 0 - 6,
     "noise_figure_dB": 7.0,         # wifi access point: 5 dB, base station: 10 dB
     "path_loss_exponent": 4.0,      # free space: 2, outdoor: 4, indoor: 6
-    "path_loss_exponent_los": 2.5,  # path loss exponent for LOS links (if different from NLOS)
-    "shadowing_sigma_dB": 4,      # log-normal shadowing std-dev in dB (default 4)
+    "path_loss_exponent_los": 4.0,  # path loss exponent for LOS links (if different from NLOS)
+    "shadowing_sigma_dB": 4,        # log-normal shadowing std-dev in dB (default 4)
     "distance": 100,                # meters
     "ris_array_size": 400,          # number of elements
     "ris_position": 50,             # meters

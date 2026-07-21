@@ -10,7 +10,6 @@ thesis_code/
 │   └── params.json
 ├── results/
 ├── scripts/
-│   ├── ber.py
 │   ├── network.py
 │   ├── direct.py
 │   ├── relay.py
@@ -22,7 +21,6 @@ thesis_code/
 │   ├── plot.py
 │   ├── ris_channel.py
 │   ├── ris_element.py
-│   ├── signal.py
 │   ├── user.py
 │   └── utils.py
 ├── main.py
