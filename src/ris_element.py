@@ -1,11 +1,5 @@
 import numpy as np
 
-def normalize_phase(phase_rad):
-    # Wrap phase(s) to [-pi, pi)
-    phase = np.asarray(phase_rad)
-    wrapped = (phase + np.pi) % (2.0 * np.pi) - np.pi
-    return wrapped
-
 def quantize_phase(phase_rad, n_bits):
     # Quantize phase(s) to a uniform codebook over [0, 2*pi)
     if n_bits is None:
@@ -28,12 +22,3 @@ def ris_element_coefficient(phase_rad, amplitude=1.0, n_bits=None):
 
     phi_q = quantize_phase(phase_rad, n_bits=n_bits)
     return alpha * np.exp(1j * phi_q)
-
-def apply_ris_element(incident_signal, phase_rad, amplitude=1.0, n_bits=None):
-    # Reflect an incident complex signal through a single RIS element.
-    gamma = ris_element_coefficient(
-        phase_rad=phase_rad,
-        amplitude=amplitude,
-        n_bits=n_bits,
-    )
-    return np.asarray(incident_signal) * gamma

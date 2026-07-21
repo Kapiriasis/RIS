@@ -12,7 +12,7 @@ The serving BS selects the best RIS from a list (one per wall).
 HOF uses an absolute serving-link SNR threshold (radio link failure).
 """
 import numpy as np
-from typing import List, Tuple
+from typing import Tuple
 
 Wall = Tuple[np.ndarray, np.ndarray]   # (endpoint_1, endpoint_2)
 
@@ -37,70 +37,6 @@ def los_blocked(
     t = float(diff[0] * e[1] - diff[1] * e[0]) / cross
     u = float(diff[0] * d[1]  - diff[1] * d[0]) / cross
     return 0.0 < t < 1.0 and 0.0 < u < 1.0
-
-def _any_blocked(p1: np.ndarray, p2: np.ndarray, walls: List[Wall]) -> bool:
-    return any(los_blocked(p1, p2, w[0], w[1]) for w in walls)
-
-# RSRP for one BS (optionally with one RIS candidate)
-def rsrp(
-    P_tx: float,
-    ue_pos: np.ndarray,
-    bs_pos: np.ndarray,
-    K_L: float,
-    K_N: float,
-    alpha_L: float,
-    alpha_N: float,
-    walls: List[Wall],
-    ris_pos: np.ndarray = None,
-    G_bf: float = 0.0,
-    chi_lin: float = 0.0,
-) -> float:
-    """
-    Large-scale RSRP using LoS or NLoS exponent based on wall intersection.
-    Adds the IRS-aided component when both BS->RIS and RIS->UE are clear.
-    """
-    d = max(float(np.linalg.norm(ue_pos - bs_pos)), 1.0)
-    blocked = _any_blocked(ue_pos, bs_pos, walls)
-
-    S_direct = (P_tx * K_N * d ** (-alpha_N) if blocked
-                else P_tx * K_L * d ** (-alpha_L))
-
-    if ris_pos is None:
-        return S_direct
-
-    r  = max(float(np.linalg.norm(ris_pos - bs_pos)), 1.0)
-    dp = max(float(np.linalg.norm(ue_pos  - ris_pos)), 1.0)
-
-    if (not _any_blocked(bs_pos, ris_pos, walls) and
-            not _any_blocked(ris_pos, ue_pos, walls)):
-        S_cand = P_tx * (K_L ** 2) * G_bf * r ** (-alpha_L) * dp ** (-alpha_L)
-        if S_cand > max(0.0, chi_lin - 1.0) * S_direct:
-            return S_direct + S_cand
-
-    return S_direct
-
-
-def best_rsrp(
-    P_tx: float,
-    ue_pos: np.ndarray,
-    bs_pos: np.ndarray,
-    K_L: float,
-    K_N: float,
-    alpha_L: float,
-    alpha_N: float,
-    walls: List[Wall],
-    ris_list: List[np.ndarray],
-    G_bf: float,
-    chi_lin: float,
-) -> float:
-    # RSRP for one BS, using the best RIS from ris_list (or direct if none helps)
-    S = rsrp(P_tx, ue_pos, bs_pos, K_L, K_N, alpha_L, alpha_N, walls)
-    for ris_pos in ris_list:
-        S_try = rsrp(P_tx, ue_pos, bs_pos, K_L, K_N, alpha_L, alpha_N,
-                     walls, ris_pos=ris_pos, G_bf=G_bf, chi_lin=chi_lin)
-        if S_try > S:
-            S = S_try
-    return S
 
 # Multi-BS handover FSM
 class HandoverFSM:
