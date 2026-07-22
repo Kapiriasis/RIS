@@ -13,11 +13,12 @@ def run_direct(params: Dict[str, Any]) -> Dict[str, Any]:
     d = params["distance"]
     n_exp = params["path_loss_exponent"]
     sigma_shadow_dB = params.get("shadowing_sigma_dB", 4.0)
+    blockage_loss_dB = params.get("direct_blockage_loss_dB", 0.0)
 
     h = rician_fading(K_dB, N)
     Xg_dB = sigma_shadow_dB * np.random.standard_normal(N)
     L0_dB = lin2db(free_space_path_loss(10.0, f_c))
-    L_dB = log_distance_path_loss(L0_dB, Xg_dB, n_exp, d)
+    L_dB = log_distance_path_loss(L0_dB, Xg_dB, n_exp, d) + blockage_loss_dB
     L0 = db2lin(L_dB)
     G = gain(L0, h)
 

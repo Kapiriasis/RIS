@@ -8,12 +8,14 @@ DEFAULT_PARAMS = {
     "P_tx": 0.1,                    # wifi access point: 100 mW, base station: 10 W
     "frequency": 28e9,              # Wifi: 2.4 GHz, 6G: 28 GHz
     "bandwidth": 20e6,              # 20 MHz
-    "N": 1000000,                      # number of samples
+    "N": 1000000,                   # number of samples
     "K_dB": 15,                     # outdoor: 10 - 15, indoor: 0 - 6,
     "noise_figure_dB": 7.0,         # wifi access point: 5 dB, base station: 10 dB
     "path_loss_exponent": 4.0,      # free space: 2, outdoor: 4, indoor: 6
     "path_loss_exponent_los": 4.0,  # path loss exponent for LOS links (if different from NLOS)
     "shadowing_sigma_dB": 4,        # log-normal shadowing std-dev in dB (default 4)
+    "ris_shadowing_enabled": False, # (LOS path always has default shadowing)
+    "direct_blockage_loss_dB": 0.0, # (e.g. wall obstruction)
     "distance": 100,                # meters
     "ris_array_size": 400,          # number of elements
     "ris_position": 50,             # meters

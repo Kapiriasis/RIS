@@ -45,8 +45,11 @@ def simulate_ris_link(params, include_direct=True):
     M = int(params["ris_array_size"])
     ris_pos = params["ris_position"]
     n_bits = params.get("ris_phase_bits", None)
-    n_exp = params["path_loss_exponent_los"]
+    n_exp_los = params["path_loss_exponent_los"]
+    n_exp_direct = params["path_loss_exponent"]
     sigma_shadow_dB = params.get("shadowing_sigma_dB", 4.0)
+    direct_blockage_loss_dB = params.get("direct_blockage_loss_dB", 0.0)
+    ris_shadowing_enabled = params.get("ris_shadowing_enabled", True)
 
     d_tx_ris, d_ris_rx = ris_link_distances(d_total, ris_pos)
 
@@ -54,11 +57,12 @@ def simulate_ris_link(params, include_direct=True):
     h_tx_ris = np.vstack([rician_fading(K_dB, N) for _ in range(M)])
     h_ris_rx = np.vstack([rician_fading(K_dB, N) for _ in range(M)])
 
-    Xg_tx_ris_dB = sigma_shadow_dB * np.random.standard_normal((1, N))
-    Xg_ris_rx_dB = sigma_shadow_dB * np.random.standard_normal((1, N))
+    sigma_shadow_ris_dB = sigma_shadow_dB if ris_shadowing_enabled else 0.0
+    Xg_tx_ris_dB = sigma_shadow_ris_dB * np.random.standard_normal((1, N))
+    Xg_ris_rx_dB = sigma_shadow_ris_dB * np.random.standard_normal((1, N))
     L0_ref_dB = lin2db(free_space_path_loss(10.0, f_c))
-    L_tx_ris = db2lin(log_distance_path_loss(L0_ref_dB, Xg_tx_ris_dB, n_exp, d_tx_ris))
-    L_ris_rx = db2lin(log_distance_path_loss(L0_ref_dB, Xg_ris_rx_dB, n_exp, d_ris_rx))
+    L_tx_ris = db2lin(log_distance_path_loss(L0_ref_dB, Xg_tx_ris_dB, n_exp_los, d_tx_ris))
+    L_ris_rx = db2lin(log_distance_path_loss(L0_ref_dB, Xg_ris_rx_dB, n_exp_los, d_ris_rx))
 
     gamma = ris_phase_profile(h_tx_ris, h_ris_rx, n_bits=n_bits)
     h_ris = ris_cascaded_channel(h_tx_ris, h_ris_rx, gamma, L_tx_ris, L_ris_rx)
@@ -67,7 +71,8 @@ def simulate_ris_link(params, include_direct=True):
     use_direct = include_direct or params.get("include_direct", False)
     if use_direct:
         Xg_direct_dB = sigma_shadow_dB * np.random.standard_normal(N)
-        L_direct = db2lin(log_distance_path_loss(L0_ref_dB, Xg_direct_dB, n_exp, d_total))
+        L_direct_dB = log_distance_path_loss(L0_ref_dB, Xg_direct_dB, n_exp_direct, d_total) + direct_blockage_loss_dB
+        L_direct = db2lin(L_direct_dB)
         h_direct = np.sqrt(1.0 / L_direct) * rician_fading(K_dB, N)
     else:
         h_direct = np.zeros(N, dtype=complex)
